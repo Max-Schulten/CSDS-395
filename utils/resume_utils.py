@@ -21,7 +21,7 @@ class ResumeClassifier:
 
     def __init__(
         self,
-        model_dir: str = "./models/model.joblib",
+        model_dir: str = "../models/resume_classifier.joblib",
         nlp_model: str = "en_core_web_md",
         embedding_model: str = "all-MiniLM-L6-v2",
         entities: list[str] = ["PERSON", "GPE", "LOC"],
@@ -50,7 +50,7 @@ class ResumeClassifier:
         self.nlp = spacy.load(nlp_model)
 
         try:
-            model_info(embedding_model)
+            model_info(f"sentence-transformers/{embedding_model}")
         except RepositoryNotFoundError:
             raise ValueError(f"'{embedding_model}' is not a valid SentenceTransformer model.")
         self.embedder = SentenceTransformer(embedding_model)
@@ -146,6 +146,6 @@ class ResumeClassifier:
 
         cleaned = self.clean_resume(resume)
         embedded = self.embedder.encode(cleaned).reshape(1, -1)
-        proba = self.model.predict_proba(embedded)[0]
+        proba = self.model.decision_function(embedded)[0]
         topk_indices = np.argsort(proba)[::-1][:top_k]
         return [self.model.classes_[i] for i in topk_indices]

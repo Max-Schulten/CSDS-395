@@ -46,7 +46,15 @@ matchBtn.addEventListener("click", async () => {
         const plainText = await parseFileToText(file);
         
         console.log("Parsed Text:", plainText);
-        
+
+        const response = await fetch("/match", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ resume_text: plainText })
+        });
+
+        const results = await response.json();
+        console.log(results)
         // Future: Connect to backend
         // await sendToPythonBackend(plainText);
 
