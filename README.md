@@ -6,3 +6,5 @@ From the base directory:
 python backend/app.py
 ```
 Starts the flask server in debug mode.
+# Architecture of the App
+<img width="683" height="800" alt="architecture" src="https://github.com/user-attachments/assets/234097a7-a86f-4d19-b3d8-b2f8b68a9b49" />
