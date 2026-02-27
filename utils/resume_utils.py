@@ -1,12 +1,6 @@
-import joblib
-import os
-import spacy, spacy.util
 import numpy as np
 import re
-from sentence_transformers import SentenceTransformer
-from huggingface_hub import model_info
-from huggingface_hub.errors import RepositoryNotFoundError
-
+from utils.gen_utils import load_classifier, load_nlp, load_embedder
 
 class ResumeClassifier:
     """Classifies resumes into broad job categories after stripping PII.
@@ -21,10 +15,10 @@ class ResumeClassifier:
 
     def __init__(
         self,
-        model_dir: str = "../models/resume_classifier.joblib",
-        nlp_model: str = "en_core_web_md",
-        embedding_model: str = "all-MiniLM-L6-v2",
-        entities: list[str] = ["PERSON", "GPE", "LOC"],
+        model = load_classifier(),
+        nlp_model = load_nlp(),
+        embedding_model = load_embedder(),
+        pii_entities: list[str] = ["PERSON", "GPE", "LOC"],
     ) -> None:
         """Initialise classifier, loading the sklearn model, spaCy, and embedding model.
 
@@ -41,19 +35,9 @@ class ResumeClassifier:
             AssertionError: If any value in entities is not a valid NER label
                 for the loaded spaCy model.
         """
-        if not os.path.exists(model_dir):
-            raise FileNotFoundError(f"No model found at '{model_dir}'.")
-        self.model = joblib.load(model_dir)
-
-        if not spacy.util.is_package(nlp_model):
-            raise OSError(f"spaCy model '{nlp_model}' is not installed.")
-        self.nlp = spacy.load(nlp_model)
-
-        try:
-            model_info(f"sentence-transformers/{embedding_model}")
-        except RepositoryNotFoundError:
-            raise ValueError(f"'{embedding_model}' is not a valid SentenceTransformer model.")
-        self.embedder = SentenceTransformer(embedding_model)
+        self.model = model
+        self.nlp = nlp_model
+        self.embedder = embedding_model
 
         self.pii_patterns = {
             "ADDRESS": re.compile(
@@ -82,10 +66,10 @@ class ResumeClassifier:
             "EMAIL": re.compile(r'\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b'),
         }
 
-        valid_ner_labels = self.nlp.get_pipe("ner").labels
-        invalid = [e for e in entities if e not in valid_ner_labels]
+        valid_ner_labels = self.nlp.get_pipe("ner").labels #type: ignore
+        invalid = [e for e in pii_entities if e not in valid_ner_labels]
         assert not invalid, f"Invalid NER labels for '{nlp_model}': {invalid}"
-        self.entities = entities
+        self.entities = pii_entities
 
     def clean_resume(self, resume: str) -> str:
         """Strip PII from a resume string using regex and spaCy NER.
