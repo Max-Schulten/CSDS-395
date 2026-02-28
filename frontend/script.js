@@ -3,6 +3,7 @@ const uploadBtn = document.getElementById("uploadBtn");
 const fileNameDisplay = document.getElementById("fileName");
 const matchBtn = document.getElementById("matchBtn");
 const jobResults = document.getElementById("jobResults");
+const jobDescInput = document.getElementById("jobDescInput");
 
 // Open hidden file picker
 uploadBtn.addEventListener("click", () => {
@@ -36,40 +37,66 @@ matchBtn.addEventListener("click", async () => {
         return;
     }
 
+    const jobDescText = jobDescInput.value.trim();
     const file = resumeInput.files[0];
     
     // Show loading state
-    jobResults.innerHTML = '<p class="placeholder">Parsing resume...</p>';
+    jobResults.innerHTML = '<p class="placeholder">Analyzing resume and finding matches...</p>';
 
     try {
         // Extract plain text from the file
         const plainText = await parseFileToText(file);
-        
         console.log("Parsed Text:", plainText);
 
-        const response = await fetch("/match", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ resume_text: plainText })
-        });
+        let htmlOutput = "";
 
-        const results = await response.json();
-        console.log(results)
-        // Future: Connect to backend
-        // await sendToPythonBackend(plainText);
+        // 1. If a job description was pasted, compute and add the score
+        if (jobDescText) {
+            const matchScore = calculateMatchScore(plainText, jobDescText);
+            htmlOutput += `
+                <div class="score-container">
+                    <div class="score-number">${matchScore}%</div>
+                    <div class="score-label">Keyword Match for Target Role</div>
+                </div>
+                <p style="text-align: center; color: #4b5563; font-size: 0.95rem; margin-bottom: 25px;">
+                    ${matchScore >= 70 ? 'Great match! Your resume aligns well with this role.' : 'Consider adding more keywords from the job description to your resume.'}
+                </p>
+                <hr style="border: 0; border-top: 1px solid #e5e7eb; margin-bottom: 25px;">
+            `;
+        }
 
-        // Display mock results (simulating a success)
-        displayMockResults(plainText);
+        // 2. Always add the recommended job cards
+        htmlOutput += `
+            <h3 style="margin-bottom: 15px; text-align: left; color: #1f2937;">Recommended Opportunities</h3>
+            
+            <div class="job-card">
+                <h3 style="color: #1d4ed8;">Item Planner</h3>
+                <p><strong>Company:</strong> RetailCorp Logistics</p>
+                <p><strong>Location:</strong> Hybrid</p>
+            </div>
+
+            <div class="job-card">
+                <h3 style="color: #1d4ed8;">Appeals Panel Member</h3>
+                <p><strong>Company:</strong> FDIC</p>
+                <p><strong>Location:</strong> Remote</p>
+            </div>
+
+            <div class="job-card">
+                <h3 style="color: #1d4ed8;">Data Analyst</h3>
+                <p><strong>Company:</strong> Tech Solutions</p>
+                <p><strong>Location:</strong> San Francisco, CA</p>
+            </div>
+        `;
+
+        // Render everything to the screen
+        jobResults.innerHTML = htmlOutput;
 
     } catch (error) {
         console.error(error);
-        jobResults.innerHTML = `<p class="error">Error parsing file: ${error.message}</p>`;
+        jobResults.innerHTML = `<p class="error" style="color: red;">Error processing file: ${error.message}</p>`;
     }
 });
 
-/**
- * Helper: Parses PDF or DOCX file to plain text
- */
 async function parseFileToText(file) {
     const arrayBuffer = await file.arrayBuffer();
 
@@ -97,26 +124,29 @@ async function parseFileToText(file) {
     throw new Error("Unsupported file type for client-side parsing.");
 }
 
-function displayMockResults(textSnippet) {
-    // Just showing a snippet of the parsed text to prove it worked
-    const snippet = textSnippet.substring(0, 100) + "...";
+function calculateMatchScore(resumeText, jobDescText) {
+    const stopWords = new Set(["the", "and", "a", "to", "of", "in", "for", "is", "on", "that", "by", "this", "with", "i", "you", "it", "not", "or", "be", "are", "from", "at", "as", "your", "all", "have", "new", "more", "an", "was", "we", "will", "can", "us", "about", "if", "my", "has", "but", "our", "one", "other", "do", "no", "they", "he", "up", "may", "what", "which", "their", "out", "use", "any", "there", "see", "only", "so", "his", "when", "who", "also", "now", "get"]);
+
+    const tokenize = (text) => {
+        return text
+            .toLowerCase()
+            .replace(/[^a-z0-9\s]/g, '')
+            .split(/\s+/)
+            .filter(word => word.length > 2 && !stopWords.has(word));
+    };
+
+    const jobKeywords = new Set(tokenize(jobDescText));
+    const resumeWords = new Set(tokenize(resumeText));
+
+    if (jobKeywords.size === 0) return 0;
+
+    let matchCount = 0;
     
-    jobResults.innerHTML = `
-        <div style="padding: 15px; background: #e0f2fe; border-radius: 8px; margin-bottom: 20px;">
-            <strong>Success! Parsed Content Preview:</strong><br>
-            <em>"${snippet}"</em>
-        </div>
+    jobKeywords.forEach(word => {
+        if (resumeWords.has(word)) {
+            matchCount++;
+        }
+    });
 
-        <div class="job-card">
-            <h3>Data Analyst</h3>
-            <p><strong>Company:</strong> TechCorp</p>
-            <p><strong>Location:</strong> Remote</p>
-        </div>
-
-        <div class="job-card">
-            <h3>Machine Learning Engineer</h3>
-            <p><strong>Company:</strong> AI Solutions</p>
-            <p><strong>Location:</strong> San Francisco, CA</p>
-        </div>
-    `;
+    return Math.round((matchCount / jobKeywords.size) * 100);
 }

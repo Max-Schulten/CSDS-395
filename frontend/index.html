@@ -15,11 +15,9 @@
 
     <main class="container">
 
-        <!-- Upload Section -->
         <section class="card upload-section">
             <h2>Upload Your Resume</h2>
 
-            <!-- Hidden File Input -->
             <input 
                 type="file" 
                 id="resumeInput" 
@@ -27,24 +25,31 @@
                 hidden
             >
 
-            <!-- Custom Upload Button -->
             <button id="uploadBtn" class="primary-btn">
                 Choose Resume
             </button>
 
             <p id="fileName" class="file-name"></p>
+        </section>
 
-            <button id="matchBtn" class="secondary-btn">
-                Match Jobs
+        <section class="card">
+            <h2>Enter Job Description</h2>
+            <textarea 
+                id="jobDescInput" 
+                placeholder="Paste a specific job description here to see your match score..." 
+                rows="6"
+            ></textarea>
+            
+            <button id="matchBtn" class="primary-btn" style="width: 100%; margin-top: 15px;">
+                Analyze Resume & Find Matches
             </button>
         </section>
 
-        <!-- Results Section -->
         <section class="card">
-            <h2>Matched Jobs</h2>
+            <h2>Results</h2>
             <div id="jobResults" class="results">
                 <p class="placeholder">
-                    Upload your resume to see job matches.
+                    Upload your resume to see recommended jobs and match scores.
                 </p>
             </div>
         </section>
