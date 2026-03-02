@@ -1,7 +1,6 @@
 """
-Job Aggregator — Skills Edition  (v4)
-======================================
-Pulls from 9 job sources and scores every listing against your skills.
+Job Aggregator:
+Pulls from 9 job sources and scores every listing against listed skills.
 
 Usage:
   python job_aggregator.py                              # interactive prompt
@@ -44,13 +43,13 @@ REQUEST_DELAY = 0.5
 
 HEADERS = {"User-Agent": "JobAggregator/4.0 (personal research script)"}
 
-# Optional API keys — read from environment
-FINDWORK_API_KEY  = "a3a94abd3da745b47f30020e9e535792a3612885"
-USAJOBS_API_KEY   = "Jv5KFukoPeshQrwm+503tCtheceGB+DXkqT7nsz+yJI="
-USAJOBS_USER_AGENT = "wmh42@case.edu"
-ADZUNA_APP_ID  = "43ca78d1"
-ADZUNA_APP_KEY = "5b082ace7f8a73e5354eeb39e1cb54c8"
-THEMUSE_KEY    = "3cf8ab9acf338a9fcb7498d1a8954c589fa5ad07e9bcb12a3210a0d3ff573b9d"
+# API keys
+FINDWORK_API_KEY  = "key"
+USAJOBS_API_KEY   = "key"
+USAJOBS_USER_AGENT = "email"
+ADZUNA_APP_ID  = "id"
+ADZUNA_APP_KEY = "key"
+THEMUSE_KEY    = "key"
 
 
 # input parsing
