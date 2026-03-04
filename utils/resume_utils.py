@@ -18,7 +18,7 @@ class ResumeClassifier:
         model = load_classifier(),
         nlp_model = load_nlp(),
         embedding_model = load_embedder(),
-        pii_entities: list[str] = ["PERSON", "GPE", "LOC"],
+        pii_entities: list[str] = ["PERSON", "GPE", "LOC"]
     ) -> None:
         """Initialise classifier, loading the sklearn model, spaCy, and embedding model.
 
@@ -71,7 +71,7 @@ class ResumeClassifier:
         assert not invalid, f"Invalid NER labels for '{nlp_model}': {invalid}"
         self.entities = pii_entities
 
-    def clean_resume(self, resume: str) -> str:
+    def clean_resume(self, resume: str, gliner = None) -> str:
         """Strip PII from a resume string using regex and spaCy NER.
 
         Regex redaction runs before NER so that character offsets
@@ -104,6 +104,9 @@ class ResumeClassifier:
             if ent.label_ in self.entities:
                 text = text[:ent.start_char] + f"[{ent.label_}]" + text[ent.end_char:]
 
+        if gliner is None:
+            return text
+        
         return text
 
     def classify_resume(self, resume: str, top_k: int = 2) -> list[str]:

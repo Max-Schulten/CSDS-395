@@ -48,7 +48,7 @@ if __name__ == "__main__":
                 if deorged_skill and len(deorged_skill) > 0 and deorged_skill != skill:
                     pattern_to_preferred.setdefault(skill, deorged_skill)
                     patterns.add(nlp.make_doc(deorged_skill))
-                    
+                        
         pattern_to_preferred.setdefault(skill, skill)
         patterns.add(nlp.make_doc(skill))
     with open(os.path.join(BASE_DIR,"data/skill_map.json"), "w") as f:

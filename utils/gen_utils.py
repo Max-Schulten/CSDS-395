@@ -1,6 +1,7 @@
 import spacy
 from config import BASE_DIR
 import os
+import re
 import joblib
 from sentence_transformers import SentenceTransformer
 from huggingface_hub import model_info
@@ -25,3 +26,11 @@ def load_embedder(model: str = "all-MiniLM-L6-v2"):
         raise ValueError(f"'{model}' is not a valid SentenceTransformer model.")
     embedder = SentenceTransformer(model)
     return embedder
+
+def clean_text(text: str):
+    if not text.strip():
+        raise ValueError("Text is empty.")
+
+    text = re.sub(r'[^a-zA-Z0-9\s\.\,\-\/\(\)\@\+]', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
