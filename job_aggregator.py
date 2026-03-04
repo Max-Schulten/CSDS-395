@@ -3,7 +3,7 @@ Job Aggregator:
 Pulls from 9 job sources and scores every listing against listed skills.
 
 Usage:
-  python job_aggregator.py                              # interactive prompt
+  python job_aggregator.py
   python job_aggregator.py --skills "python, sql, dbt"
   python job_aggregator.py --skills "react, typescript" --max-pages 5
 
@@ -11,17 +11,18 @@ Usage:
     Jobicy             remote jobs worldwide
     RemoteOK           remote tech jobs
     The Muse           global jobs
-    Himalayas          remote jobs (new)
-    We Work Remotely   remote jobs via RSS (new)
-    Findwork.dev       dev / tech jobs (new)  → FINDWORK_API_KEY
-    USAJobs            US federal + government jobs (new)
-                          → USAJOBS_API_KEY  + USAJOBS_USER_AGENT
-    Adzuna             US private-sector jobs
-                          → ADZUNA_APP_ID + ADZUNA_APP_KEY
+    Himalayas          remote jobs
+    We Work Remotely   remote jobs via RSS
+    Findwork.dev       dev / tech jobs        → FINDWORK_API_KEY
+    USAJobs            US federal jobs        → USAJOBS_API_KEY + USAJOBS_USER_AGENT
+    Adzuna             US private-sector jobs → ADZUNA_APP_ID + ADZUNA_APP_KEY
 
 Output:
   jobs_dataframe.csv    sorted by skill match score (highest first)
   job_descriptions/     one .txt per job with the full description
+
+API Keys:
+  Store keys in a .env file in this directory
 """
 
 import os
@@ -34,28 +35,31 @@ import requests
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load API keys from .env file
+load_dotenv()
 
 # config
-
 DESC_DIR      = Path("job_descriptions")
 OUTPUT_CSV    = "jobs_dataframe.csv"
 REQUEST_DELAY = 0.5
 
 HEADERS = {"User-Agent": "JobAggregator/4.0 (personal research script)"}
 
-# API keys
-FINDWORK_API_KEY  = "key"
-USAJOBS_API_KEY   = "key"
-USAJOBS_USER_AGENT = "email"
-ADZUNA_APP_ID  = "id"
-ADZUNA_APP_KEY = "key"
-THEMUSE_KEY    = "key"
+# API keys — loaded from .env (never hardcode these)
+FINDWORK_API_KEY   = os.getenv("FINDWORK_API_KEY", "")
+USAJOBS_API_KEY    = os.getenv("USAJOBS_API_KEY", "")
+USAJOBS_USER_AGENT = os.getenv("USAJOBS_USER_AGENT", "")
+ADZUNA_APP_ID      = os.getenv("ADZUNA_APP_ID", "")
+ADZUNA_APP_KEY     = os.getenv("ADZUNA_APP_KEY", "")
+THEMUSE_KEY        = os.getenv("THEMUSE_KEY", "")
 
 
 # input parsing
 def parse_args() -> tuple[list[str], int]:
     parser = argparse.ArgumentParser(
-        description="Aggregate jobs worldwide and score them against your skills."
+        description="Find job openings with specific skills."
     )
     parser.add_argument(
         "--skills",
@@ -180,7 +184,6 @@ def fetch_arbeitnow(skills: list[str], max_pages: int) -> list[dict]:
 
 
 # 2. Jobicy
-
 def fetch_jobicy(skills: list[str], max_pages: int) -> list[dict]:
     print("[Jobicy] Fetching …")
     jobs, seen = [], set()
@@ -282,14 +285,10 @@ def fetch_themuse(skills: list[str], max_pages: int) -> list[dict]:
 
 # 5. Himalayas
 def fetch_himalayas(skills: list[str], max_pages: int) -> list[dict]:
-    """
-    https://himalayas.app/api
-    Free, no key. Max 20 results per request; use offset to paginate.
-    """
     print("[Himalayas] Fetching …")
     jobs, seen = [], set()
     page_size = 20
-    total_pages = max_pages * 2   # each page is only 20 jobs
+    total_pages = max_pages * 2
 
     for offset in range(0, total_pages * page_size, page_size):
         try:
@@ -309,7 +308,6 @@ def fetch_himalayas(skills: list[str], max_pages: int) -> list[dict]:
                 continue
             title   = j.get("title", "")
             company = j.get("companyName", "")
-            # locationRestrictions is a list of country names
             loc_restrictions = j.get("locationRestrictions", [])
             location = ", ".join(loc_restrictions) if loc_restrictions else "Remote (Worldwide)"
             desc    = clean_html(j.get("description", ""))
@@ -332,11 +330,8 @@ WWR_FEEDS = {
     "Management & Finance" : "https://weworkremotely.com/categories/remote-management-finance-legal-jobs.rss",
     "All Other Remote"     : "https://weworkremotely.com/categories/remote-jobs.rss",
 }
+
 def fetch_weworkremotely(skills: list[str], max_pages: int) -> list[dict]:
-    """
-    We Work Remotely public RSS feeds — no key, ~80% US companies.
-    Each feed returns the 100 most recent listings in that category.
-    """
     print("[We Work Remotely] Fetching …")
     jobs, seen = [], set()
     for category, feed_url in WWR_FEEDS.items():
@@ -345,7 +340,7 @@ def fetch_weworkremotely(skills: list[str], max_pages: int) -> list[dict]:
             r.raise_for_status()
             root = ET.fromstring(r.content)
         except Exception as e:
-            print(f"  Error fetching '{category}' feed: {e}"); continue
+            print(f" fetching '{category}' feed"); continue
 
         for item in root.iter("item"):
             def tag(name: str) -> str:
@@ -356,7 +351,6 @@ def fetch_weworkremotely(skills: list[str], max_pages: int) -> list[dict]:
             if uid in seen:
                 continue
             title_raw = tag("title")
-            # WWR title format: "Company: Job Title"
             if ":" in title_raw:
                 company, title = [p.strip() for p in title_raw.split(":", 1)]
             else:
@@ -374,15 +368,9 @@ def fetch_weworkremotely(skills: list[str], max_pages: int) -> list[dict]:
 
 
 # 7. Findwork.dev
-
 def fetch_findwork(skills: list[str], max_pages: int) -> list[dict]:
-    """
-    https://findwork.dev/developers/
-    Free API key — register at https://findwork.dev/login/ then copy token from profile.
-    Set env var: FINDWORK_API_KEY=your_token
-    """
     if not FINDWORK_API_KEY:
-        print("[Findwork.dev] Skipped – set FINDWORK_API_KEY env var to enable.")
+        print("[Findwork.dev] Skipped – set FINDWORK_API_KEY in .env to enable.")
         return []
     print("[Findwork.dev] Fetching …")
     jobs, seen = [], set()
@@ -414,7 +402,7 @@ def fetch_findwork(skills: list[str], max_pages: int) -> list[dict]:
                 if row:
                     seen.add(uid); jobs.append(row)
 
-            url = body.get("next", None)   # paginate via 'next' URL
+            url = body.get("next", None)
             time.sleep(REQUEST_DELAY)
 
     print(f"  → {len(jobs)} matching jobs")
@@ -422,17 +410,9 @@ def fetch_findwork(skills: list[str], max_pages: int) -> list[dict]:
 
 
 # 8. USAJobs
-
 def fetch_usajobs(skills: list[str], max_pages: int) -> list[dict]:
-    """
-    https://developer.usajobs.gov/
-    Free API key — apply at https://developer.usajobs.gov/API-Key/Apply-for-a-Developer-Account
-    Set env vars:
-      USAJOBS_API_KEY      your API key
-      USAJOBS_USER_AGENT   the email address you registered with
-    """
     if not USAJOBS_API_KEY or not USAJOBS_USER_AGENT:
-        print("[USAJobs] Skipped – set USAJOBS_API_KEY and USAJOBS_USER_AGENT env vars to enable.")
+        print("[USAJobs] Skipped – set USAJOBS_API_KEY and USAJOBS_USER_AGENT in .env to enable.")
         return []
     print("[USAJobs] Fetching US federal jobs …")
     jobs, seen = [], set()
@@ -445,9 +425,9 @@ def fetch_usajobs(skills: list[str], max_pages: int) -> list[dict]:
     for skill in skills:
         for page in range(1, max_pages + 1):
             params = {
-                "Keyword"      : skill,
-                "ResultsPerPage": 50,
-                "Page"         : page,
+                "Keyword"        : skill,
+                "ResultsPerPage" : 50,
+                "Page"           : page,
             }
             try:
                 r = requests.get(
@@ -493,7 +473,7 @@ def fetch_usajobs(skills: list[str], max_pages: int) -> list[dict]:
 # 9. Adzuna
 def fetch_adzuna(skills: list[str], max_pages: int) -> list[dict]:
     if not ADZUNA_APP_ID or not ADZUNA_APP_KEY:
-        print("[Adzuna] Skipped – set ADZUNA_APP_ID + ADZUNA_APP_KEY env vars to enable.")
+        print("[Adzuna] Skipped – set ADZUNA_APP_ID and ADZUNA_APP_KEY in .env to enable.")
         return []
     print("[Adzuna] Fetching …")
     jobs, seen = [], set()
@@ -548,9 +528,9 @@ def main():
     all_jobs += fetch_themuse(skills, max_pages)
     all_jobs += fetch_himalayas(skills, max_pages)
     all_jobs += fetch_weworkremotely(skills, max_pages)
-    all_jobs += fetch_findwork(skills, max_pages)        # optional key
-    all_jobs += fetch_usajobs(skills, max_pages)         # optional key (US)
-    all_jobs += fetch_adzuna(skills, max_pages)          # optional key (US)
+    all_jobs += fetch_findwork(skills, max_pages)
+    all_jobs += fetch_usajobs(skills, max_pages)
+    all_jobs += fetch_adzuna(skills, max_pages)
 
     if not all_jobs:
         print("\nNo matching jobs found. Try different or broader skills.")
@@ -561,14 +541,12 @@ def main():
         "url", "skills_matched", "matched_skills", "description_file"
     ])
 
-    # Deduplicate by (title + company); keep highest skill score
     df.sort_values("skills_matched", ascending=False, inplace=True)
     df.drop_duplicates(subset=["title", "company"], keep="first", inplace=True)
     df.reset_index(drop=True, inplace=True)
 
     df.to_csv(OUTPUT_CSV, index=False)
 
-    # Summary
     print("\n" + "=" * 60)
     print(f"  Total unique jobs : {len(df)}")
     print(f"  CSV saved to      : {OUTPUT_CSV}")
@@ -586,7 +564,7 @@ def main():
         bar = "█" * min(count, 40)
         print(f"  {int(score):2d} skill(s) : {bar} ({count})")
 
-    print("\nTop 10 jobs by skill match:")
+    print("\nTop 10 jobs by rough skill match:")
     print(
         df[["title", "company", "location", "skills_matched", "matched_skills"]]
         .head(10)
