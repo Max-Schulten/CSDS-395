@@ -124,29 +124,25 @@ async function parseFileToText(file) {
     throw new Error("Unsupported file type for client-side parsing.");
 }
 
-function calculateMatchScore(resumeText, jobDescText) {
-    const stopWords = new Set(["the", "and", "a", "to", "of", "in", "for", "is", "on", "that", "by", "this", "with", "i", "you", "it", "not", "or", "be", "are", "from", "at", "as", "your", "all", "have", "new", "more", "an", "was", "we", "will", "can", "us", "about", "if", "my", "has", "but", "our", "one", "other", "do", "no", "they", "he", "up", "may", "what", "which", "their", "out", "use", "any", "there", "see", "only", "so", "his", "when", "who", "also", "now", "get"]);
+async function calculateMatchScore(resumeText, jobDescText) {
+    try {
+        const resumeResponse = await fetch("http://localhost:5000/analyze-resume", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ resume_text: resumeText })
+        });
+        const resumeData = await resumeResponse.json();
+        console.log("Resume analysis:", resumeData);
 
-    const tokenize = (text) => {
-        return text
-            .toLowerCase()
-            .replace(/[^a-z0-9\s]/g, '')
-            .split(/\s+/)
-            .filter(word => word.length > 2 && !stopWords.has(word));
-    };
+        const jobResponse = await fetch("http://localhost:5000/analyze-job", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ job_desc: jobDescText })
+        });
+        const jobData = await jobResponse.json();
+        console.log("Job analysis:", jobData);
 
-    const jobKeywords = new Set(tokenize(jobDescText));
-    const resumeWords = new Set(tokenize(resumeText));
-
-    if (jobKeywords.size === 0) return 0;
-
-    let matchCount = 0;
-    
-    jobKeywords.forEach(word => {
-        if (resumeWords.has(word)) {
-            matchCount++;
-        }
-    });
-
-    return Math.round((matchCount / jobKeywords.size) * 100);
+    } catch (error) {
+        console.log("Error fetching from Flask endpoints:", error);
+    }
 }
