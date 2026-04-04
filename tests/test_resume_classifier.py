@@ -31,7 +31,7 @@ def make_mock_model():
 
 def make_mock_nlp():
     mock_nlp = MagicMock()
-    mock_nlp.get_pipe.return_value.labels = ("PERSON", "ORG", "GPE", "LOC")
+    mock_nlp.get_pipe.return_value.labels = ("PERSON", "ORG", "GPE", "LOC", "NORP")
     mock_nlp.return_value.ents = []
     return mock_nlp
 
@@ -151,7 +151,7 @@ class TestInit:
         assert rc.entities == ["PERSON", "GPE"]
 
     def test_default_pii_entities(self, classifier):
-        assert classifier.entities == ["PERSON", "GPE", "LOC"]
+        assert classifier.entities == ["PERSON", "GPE", "LOC", "ORG"]
 
     def test_pii_patterns_compiled(self, classifier):
         import re
@@ -209,7 +209,18 @@ class TestCleanResume:
         assert "[PERSON]" in result
 
     def test_ner_entity_not_in_pii_list_kept(self, classifier):
-        """ORG is not in default pii_entities so should not be redacted."""
+        """NORP is not in default pii_entities so should not be redacted."""
+        mock_ent = MagicMock()
+        mock_ent.text = "American"
+        mock_ent.label_ = "NORP"
+        mock_ent.start_char = 0
+        mock_ent.end_char = 8
+        classifier.nlp.return_value.ents = [mock_ent]
+        result = classifier.clean_resume("American software engineer.")
+        assert "[NORP]" not in result
+
+    def test_org_entity_redacted(self, classifier):
+        """ORG is in default pii_entities and should be redacted."""
         mock_ent = MagicMock()
         mock_ent.text = "OpenAI"
         mock_ent.label_ = "ORG"
@@ -217,10 +228,79 @@ class TestCleanResume:
         mock_ent.end_char = 6
         classifier.nlp.return_value.ents = [mock_ent]
         result = classifier.clean_resume("OpenAI is a tech company.")
-        assert "[ORG]" not in result
+        assert "[ORG]" in result
 
     def test_returns_string(self, classifier):
         result = classifier.clean_resume("Experienced Python developer.")
+        assert isinstance(result, str)
+
+    # ── GLiNER PII pass ───────────────────────────────────────────────────────
+
+    def _mock_gliner(self, ents):
+        g = MagicMock()
+        g.predict_entities.return_value = ents
+        return g
+
+    def test_gliner_person_name_redacted(self, classifier):
+        g = self._mock_gliner([
+            {"text": "Jane Doe", "label": "person name", "start": 0, "end": 8, "score": 0.9}
+        ])
+        result = classifier.clean_resume("Jane Doe is an engineer.", gliner=g)
+        assert "[PERSON]" in result
+        assert "Jane Doe" not in result
+
+    def test_gliner_school_redacted_as_org(self, classifier):
+        g = self._mock_gliner([
+            {"text": "MIT", "label": "school", "start": 14, "end": 17, "score": 0.92}
+        ])
+        result = classifier.clean_resume("Graduated from MIT in 2020.", gliner=g)
+        assert "[ORG]" in result
+        assert "MIT" not in result
+
+    def test_gliner_education_degree_label_not_redacted(self, classifier):
+        """education degree/major labels are disambiguation hints — not PII."""
+        g = self._mock_gliner([
+            {"text": "B.S. Computer Science", "label": "education degree",
+             "start": 0, "end": 21, "score": 0.95}
+        ])
+        result = classifier.clean_resume("B.S. Computer Science graduate.", gliner=g)
+        assert "[PERSON]" not in result
+        assert "[ORG]" not in result
+
+    def test_gliner_education_major_label_not_redacted(self, classifier):
+        g = self._mock_gliner([
+            {"text": "Computer Science", "label": "education major",
+             "start": 0, "end": 16, "score": 0.88}
+        ])
+        result = classifier.clean_resume("Computer Science background.", gliner=g)
+        assert "[PERSON]" not in result
+        assert "[ORG]" not in result
+
+    def test_gliner_multiple_entities_processed_correctly(self, classifier):
+        """Both person name and school in same text are both redacted."""
+        g = self._mock_gliner([
+            {"text": "Alice",    "label": "person name", "start": 0,  "end": 5,  "score": 0.95},
+            {"text": "Stanford", "label": "school",      "start": 20, "end": 28, "score": 0.90},
+        ])
+        result = classifier.clean_resume("Alice graduated from Stanford University.", gliner=g)
+        assert "[PERSON]" in result
+        assert "[ORG]" in result
+
+    def test_gliner_reverse_order_preserves_offsets(self, classifier):
+        """Entities processed right-to-left so earlier offsets stay valid."""
+        # Two overlapping-position entities — reverse order prevents offset drift
+        g = self._mock_gliner([
+            {"text": "Bob",     "label": "person name", "start": 0,  "end": 3,  "score": 0.9},
+            {"text": "Harvard", "label": "school",      "start": 17, "end": 24, "score": 0.9},
+        ])
+        result = classifier.clean_resume("Bob graduated from Harvard last year.", gliner=g)
+        # Both should be present and correctly placed
+        assert "[PERSON]" in result
+        assert "[ORG]" in result
+
+    def test_gliner_none_skips_pass(self, classifier):
+        """Passing gliner=None should not raise and should return cleaned text."""
+        result = classifier.clean_resume("Jane Doe engineer.", gliner=None)
         assert isinstance(result, str)
 
     def test_whitespace_normalised(self, classifier):

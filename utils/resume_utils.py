@@ -18,7 +18,7 @@ class ResumeClassifier:
         model = load_classifier(),
         nlp_model = load_nlp(),
         embedding_model = load_embedder(),
-        pii_entities: list[str] = ["PERSON", "GPE", "LOC"]
+        pii_entities: list[str] = ["PERSON", "GPE", "LOC", "ORG"]
     ) -> None:
         """Initialise classifier, loading the sklearn model, spaCy, and embedding model.
 
@@ -104,9 +104,18 @@ class ResumeClassifier:
             if ent.label_ in self.entities:
                 text = text[:ent.start_char] + f"[{ent.label_}]" + text[ent.end_char:]
 
-        if gliner is None:
-            return text
-        
+        if gliner is not None:
+            pii_labels = ["person name", "school"]
+            other_labels = ["education degree", "education major"] # Disambiguates between false positive and true positive
+            label_map = {"person name": "PERSON", "school": "ORG"}
+            gliner_ents = gliner.predict_entities(text, pii_labels + other_labels , threshold=0.5)
+            for ent in sorted(gliner_ents, key=lambda e: e['start'], reverse=True):
+                label = ent['label']
+                if label not in pii_labels:
+                    continue
+                label = label_map[label]
+                text = text[:ent['start']] + f'[{label}]' + text[ent['end']:]
+
         return text
 
     def classify_resume(self, resume: str, top_k: int = 2) -> list[str]:
