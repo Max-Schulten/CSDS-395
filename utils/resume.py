@@ -1,5 +1,5 @@
 from utils.resume_utils import ResumeClassifier
-from utils.skills_utils import SkillsExtractor, load_gliner
+from utils.skills_utils import SkillsExtractor
 from utils.gen_utils import load_classifier
 
 class Resume:
@@ -7,14 +7,14 @@ class Resume:
         classifier = classifier if classifier is not None else load_classifier()
         skill_extractor = skill_extractor if skill_extractor is not None else SkillsExtractor()
         self.resume_raw = resume_text
-        self.education = skill_extractor.extract_education(resume_text)
-        self.skills = skill_extractor.extract_skills(resume_text)
+        self.skills, self.education = skill_extractor.extract_all(resume_text, use_gliner=True, use_spacy=True)
         self.resume_text = classifier.clean_resume(resume_text, gliner=gliner) # type: ignore
+        self.categories = classifier.classify_resume(self.resume_text) # type: ignore
 
-        
     def to_dict(self):
         return {
             "text": self.resume_text,
             "skills": self.skills,
-            "education": self.education
+            "education": self.education,
+            "categories": self.categories
         }

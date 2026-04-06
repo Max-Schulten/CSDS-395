@@ -59,16 +59,24 @@ def load_skills_map(skill_map_path: str = os.path.join(BASE_DIR, 'data/skill_map
 def load_skills_matcher(nlp_model = None, skills_map = None):
     skills_map = skills_map if skills_map is not None else load_skills_map()
     nlp_model = nlp_model if nlp_model is not None else load_nlp()
-    matcher = PhraseMatcher(nlp_model.vocab, attr="LOWER")  
+    matcher = PhraseMatcher(nlp_model.vocab, attr="LOWER")
     patterns = [nlp_model.make_doc(k) for k in set(skills_map.keys())]
     matcher.add("SKILL", patterns)
     return matcher
-    
+
 def load_gliner(model_name: str = "gliner-community/gliner_medium-v2.5"):
     model = GLiNER.from_pretrained(model_name)
     return model
 
 class SkillsExtractor:
+    _SKILL_LABELS = {"job skill", "technical software", "technical ability"}
+    _EDUCATION_LABELS = {"education degree", "education major"}
+    _ALL_LABELS = list(_SKILL_LABELS | _EDUCATION_LABELS)
+
+    _CANONICAL_DEGREES = {"phd", "master's", "bachelor's", "associate's", "high school diploma"}
+    _DEGREE_ORDER = {"high school diploma": 0, "associate's": 1, "bachelor's": 2, "master's": 3, "phd": 4}
+    _DEGREE_CONFIDENCE_FLOOR = {"phd": 0.75, "master's": 0.75, "bachelor's": 0.5, "associate's": 0.5, "high school diploma": 0.5}
+
     def __init__(self, nlp = None, matcher = None, gliner = None, skills_map = None) -> None:
         nlp = nlp if nlp is not None else load_nlp()
         skills_map = skills_map if skills_map is not None else load_skills_map()
@@ -77,72 +85,99 @@ class SkillsExtractor:
         self.nlp = nlp
         self.matcher = matcher if matcher is not None else load_skills_matcher(nlp_model=nlp)
         self.gliner = gliner if gliner is not None else load_gliner()
-        self.gliner_labs = {"skills": ["job skill", "technical software", "technical ability", "certification"], "education": ["education degree", "education major"]}
         self.skills_map = skills_map
-    
-    def extract_skills(self, text: str) -> dict[str, list[int]]:
+
+    def _predict_entities_chunked(self, text: str, threshold: float = 0.7, chunk_size: int = 1000) -> list[dict]:
+        """Run a single GLiNER pass over all labels in sentence-based chunks to avoid token-limit truncation."""
         doc = self.nlp(text)
-        seen = set()
-        skills = {} # Keys are skills, and values are indices of detection
-        matches = self.matcher(doc) # type: ignore
-        for _, start, end in matches:
-            skill_text = doc[start:end].text.lower()
-            skill = self.skills_map[skill_text]
-            if skill not in seen:
-                seen.add(skill)
-                skills[skill] = [start, end]
-        gliner_matches = self.gliner.predict_entities(text, self.gliner_labs["skills"], threshold=0.5)
-        for match in gliner_matches:
-            if match['label'] != 'education':
-                skill_text = match['text'].lower().strip()
-                skill = self.skills_map.get(skill_text, skill_text)
+        sentences = list(doc.sents)
+        all_entities = []
+        chunk_sents: list = []
+        chunk_char_start = 0
+
+        def flush(sents, start_char):
+            if not sents:
+                return
+            chunk_text = text[start_char:sents[-1].end_char]
+            for ent in self.gliner.predict_entities(chunk_text, self._ALL_LABELS, threshold=threshold):
+                adjusted = dict(ent)
+                adjusted['start'] += start_char
+                adjusted['end'] += start_char
+                all_entities.append(adjusted)
+
+        for sent in sentences:
+            if chunk_sents and (sent.end_char - chunk_char_start) > chunk_size:
+                flush(chunk_sents, chunk_char_start)
+                chunk_char_start = sent.start_char
+                chunk_sents = [sent]
+            elif chunk_sents:
+                chunk_sents.append(sent)
+            else:
+                chunk_char_start = sent.start_char
+                chunk_sents = [sent]
+
+        flush(chunk_sents, chunk_char_start)
+        return all_entities
+
+    def extract_all(self, text: str, use_gliner: bool = True, use_spacy: bool = True) -> tuple[dict[str, list[int]], dict]:
+        """Extract skills and education in a single GLiNER pass. Prefer this over calling
+        extract_skills and extract_education separately to avoid redundant model inference."""
+        doc = self.nlp(text)
+        seen: set[str] = set()
+        skills: dict[str, list[int]] = {}
+
+        if use_spacy:
+            for _, start, end in self.matcher(doc):  # type: ignore
+                skill_text = doc[start:end].text.lower()
+                skill = self.skills_map[skill_text]
                 if skill not in seen:
                     seen.add(skill)
-                    skills[skill] = [match['start'], match['end']]
-        return skills
-    
-    _CANONICAL_DEGREES = {"phd", "master's", "bachelor's", "associate's", "high school diploma"}
-    _DEGREE_ORDER = {"high school diploma": 0, "associate's": 1, "bachelor's": 2, "master's": 3, "phd": 4}
-    # Higher-rank degrees require stronger confidence to guard against noise promoting degree level
-    _DEGREE_CONFIDENCE_FLOOR = {"phd": 0.75, "master's": 0.75, "bachelor's": 0.5, "associate's": 0.5, "high school diploma": 0.5}
+                    skills[skill] = [start, end]
 
-    def extract_education(self, text: str) -> dict:
-        degree_candidates = []  # (rank, score, canonical)
-        majors = []
-        seen_majors = set()
+        degree_candidates: list[tuple[int, float, str]] = []
+        majors: list[str] = []
+        seen_majors: set[str] = set()
 
-        gliner_matches = self.gliner.predict_entities(text, self.gliner_labs["education"], threshold=0.5)
-        for match in gliner_matches:
-            if match['label'] != 'education degree':
-                continue
+        if use_gliner:
+            for match in self._predict_entities_chunked(text):
+                label = match['label']
 
-            normalized = normalize_degree(match['text'])
-            if normalized not in self._CANONICAL_DEGREES:
-                continue  # school name or other noise — skip
+                if label in self._SKILL_LABELS:
+                    skill_text = match['text'].lower().strip()
+                    skill = self.skills_map.get(skill_text, skill_text)
+                    if skill not in seen:
+                        seen.add(skill)
+                        skills[skill] = [match['start'], match['end']]
 
-            # Always extract majors from the span regardless of confidence.
-            # Break after first matching pattern to avoid over-consuming adjacent words.
-            raw = match['text'].strip(' ,.')
-            remainder = raw
-            for pattern, _ in DEGREE_PATTERNS:
-                stripped = pattern.sub('', remainder).strip(' ,.')
-                if stripped != remainder:
-                    remainder = stripped
-                    break
-            major_lower = remainder.lower()
-            if remainder and remainder != raw and major_lower not in seen_majors:
-                majors.append(major_lower)
-                seen_majors.add(major_lower)
+                elif label == "education degree":
+                    normalized = normalize_degree(match['text'])
+                    if normalized not in self._CANONICAL_DEGREES:
+                        continue  # school name or other noise — skip
 
-            # Only trust this match for degree-level selection if it clears the confidence floor
-            floor = self._DEGREE_CONFIDENCE_FLOOR[normalized]
-            if match['score'] >= floor:
-                degree_candidates.append((self._DEGREE_ORDER[normalized], match['score'], normalized))
+                    # Strip the degree token to recover the major from the span.
+                    raw = match['text'].strip(' ,.')
+                    remainder = raw
+                    for pattern, _ in DEGREE_PATTERNS:
+                        stripped = pattern.sub('', remainder).strip(' ,.')
+                        if stripped != remainder:
+                            remainder = stripped
+                            break
+                    major_lower = remainder.lower()
+                    if remainder and remainder != raw and major_lower not in seen_majors:
+                        majors.append(major_lower)
+                        seen_majors.add(major_lower)
 
-        # Take highest rank; break ties by GLiNER confidence
-        if degree_candidates:
-            education_level = max(degree_candidates, key=lambda x: (x[0], x[1]))[2]
-        else:
-            education_level = None
+                    floor = self._DEGREE_CONFIDENCE_FLOOR[normalized]
+                    if match['score'] >= floor:
+                        degree_candidates.append((self._DEGREE_ORDER[normalized], match['score'], normalized))
 
-        return {"degree": education_level, "majors": majors}
+                elif label == "education major":
+                    major_lower = match['text'].lower().strip()
+                    if major_lower and major_lower not in seen_majors:
+                        majors.append(major_lower)
+                        seen_majors.add(major_lower)
+
+        education_level = max(degree_candidates, key=lambda x: (x[0], x[1]))[2] if degree_candidates else None
+        education = {"degree": education_level, "majors": majors}
+
+        return skills, education

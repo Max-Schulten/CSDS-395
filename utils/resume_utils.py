@@ -1,6 +1,26 @@
 import numpy as np
 import re
-from utils.gen_utils import load_classifier, load_nlp, load_embedder
+from sklearn.base import BaseEstimator, TransformerMixin
+from sentence_transformers import SentenceTransformer
+from utils.gen_utils import load_classifier, load_nlp
+
+
+class SentenceTransformerVectorizer(BaseEstimator, TransformerMixin):
+    """Sklearn-compatible wrapper for SentenceTransformer. Defined here so
+    joblib can deserialize the saved (embedder, clf) tuple at load time."""
+    def __init__(self, model_name="all-MiniLM-L6-v2", batch_size=32):
+        self.model_name = model_name
+        self.batch_size = batch_size
+        self.model = SentenceTransformer(model_name)
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        return self.model.encode(list(X), batch_size=self.batch_size)
+
+    def encode(self, text, **kwargs):
+        return self.model.encode(text, **kwargs)
 
 class ResumeClassifier:
     """Classifies resumes into broad job categories after stripping PII.
@@ -15,29 +35,25 @@ class ResumeClassifier:
 
     def __init__(
         self,
-        model = load_classifier(),
-        nlp_model = load_nlp(),
-        embedding_model = load_embedder(),
+        model = None,
+        nlp_model = None,
         pii_entities: list[str] = ["PERSON", "GPE", "LOC", "ORG"]
     ) -> None:
         """Initialise classifier, loading the sklearn model, spaCy, and embedding model.
 
         Args:
-            model_dir (str): Path to a saved joblib model file.
-            nlp_model (str): Name of an installed spaCy model package.
-            embedding_model (str): HuggingFace model name for SentenceTransformer.
-            entities (list[str]): NER labels whose matches will be redacted.
+            model: Tuple of (SentenceTransformerVectorizer, LinearSVC) loaded from joblib.
+            nlp_model: Loaded spaCy language model.
+            pii_entities (list[str]): NER labels whose matches will be redacted.
 
         Raises:
             FileNotFoundError: If no model file exists at model_dir.
             OSError: If the requested spaCy model package is not installed.
-            ValueError: If embedding_model is not a valid HuggingFace model.
             AssertionError: If any value in entities is not a valid NER label
                 for the loaded spaCy model.
         """
-        self.model = model
-        self.nlp = nlp_model
-        self.embedder = embedding_model
+        self.embedder, self.model = model if model is not None else load_classifier()
+        self.nlp = nlp_model if nlp_model is not None else load_nlp()
 
         self.pii_patterns = {
             "ADDRESS": re.compile(

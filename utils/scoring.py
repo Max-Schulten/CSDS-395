@@ -3,12 +3,14 @@ from utils.job import Job
 from utils.gen_utils import load_embedder
 import numpy as np
 
-def score(resume: Resume, jobs: list[Job] | Job, embedding_model = None, alpha=0.45, beta=0.45, gamma=0.1, tau=0.8, window_size=30, stride=10) -> dict[str, str | list[str] | list[float]]:
+def score(resume: Resume, jobs: list[Job] | Job, embedding_model = None, alpha=0.4, beta=0.4, gamma=0.2, tau=0.6, window_size=30, stride=10, floor=0.5) -> dict[str, str | list[str] | list[float]]:
     embedding_model = embedding_model if embedding_model is not None else load_embedder()
     out = {
         "resume": resume.to_dict(),
         "jobs": [],
         "skill_coverages": [],
+        "covered_skills": [],
+        "unmatched_skills": [],
         "semantic_scores": [],
         "education_coverages": [],
         "scores": []
@@ -35,28 +37,33 @@ def score(resume: Resume, jobs: list[Job] | Job, embedding_model = None, alpha=0
         emb_job_skills = embedding_model.encode(job_skills, convert_to_numpy=True, normalize_embeddings=True)
         
         # Skill coverage score; in [0,1]
-        skill_cov = skill_coverage(resume_skills, job_skills, emb_res_skills, emb_job_skills, tau)
-        out["skill_coverages"].append(skill_cov)
-        
+        skill_cov, covered, unmatched = skill_coverage(resume_skills, job_skills, emb_res_skills, emb_job_skills, tau)
+        out["skill_coverages"].append(float(skill_cov))
+        out["covered_skills"].append(covered)
+        out["unmatched_skills"].append(unmatched)
+
         # Semantic score; in [0,1]
         job_embs, job_snaps = embed_doc(job.job_desc, embedding_model=embedding_model, window_size=window_size, stride=stride)
-        sem_score = semantic_score(res_embs, job_embs)
-        out["semantic_scores"].append(sem_score)
-        
+        sem_score = semantic_score(res_embs, job_embs, floor=floor)
+        out["semantic_scores"].append(float(sem_score))
+
         # Education Coverage; in [0,1]
         ed_cov = education_coverage(resume.education, job.education, embedding_model, emb_res_majors)
-        out["education_coverages"].append(ed_cov)
-        
+        out["education_coverages"].append(float(ed_cov))
+
         total_score = alpha * skill_cov + beta * sem_score + gamma * ed_cov
-        out["scores"].append(total_score)
+        out["scores"].append(float(total_score))
         
     return out
 
-def semantic_score(resume_embs, job_embs):
+def semantic_score(resume_embs, job_embs, floor=0.5):
     sim_mat = job_embs @ resume_embs.T # type: ignore
-    return sim_mat.max(axis=1).mean()
+    best_per_window = sim_mat.max(axis=1)
+    if floor > 0.0:
+        best_per_window = best_per_window[best_per_window >= floor]
+    return best_per_window.mean() if len(best_per_window) > 0 else 0.0
     
-def skill_coverage(resume_skills, job_skills, resume_skills_emb, job_skills_emb, tau=0.5):
+def skill_coverage(resume_skills, job_skills, resume_skills_emb, job_skills_emb, tau=0.6):
     sim_matrix = resume_skills_emb @ job_skills_emb.T
     match_mask = sim_matrix >= tau
     
@@ -72,15 +79,20 @@ def skill_coverage(resume_skills, job_skills, resume_skills_emb, job_skills_emb,
             job_skill_scores[js] = score_
 
     def weight(score_, tau):
-        return (score_ - tau) / (1.0 - tau)  # 0 at tau, 1 at perfect match
+        if score_ > (tau+((1-tau)/2)):
+            return 1
+        else:
+            return tau
 
     coverage_score = (
         sum(weight(s, tau) for s in job_skill_scores.values()) / len(job_skills)
         if job_skills else 0.0
     )
-    return coverage_score
+    covered_job_skills = list(job_skill_scores.keys())
+    unmatched_job_skills = [js for js in job_skills if js not in job_skill_scores]
+    return coverage_score, covered_job_skills, unmatched_job_skills
 
-def education_coverage(resume_edu: dict, job_edu: dict, embedding_model, resume_major_embs=None, edu_tau=0.85):
+def education_coverage(resume_edu: dict, job_edu: dict, embedding_model, resume_major_embs=None, edu_tau=0.6):
     # ── Degree level ──────────────────────────────────────────────────────────
     DEGREE_ORDER = {"high school diploma": 0, "associate's": 1, "bachelor's": 2, "master's": 3, "phd": 4}
 
