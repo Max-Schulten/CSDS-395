@@ -142,6 +142,246 @@ textarea:focus {
     background-color: white;
 }
 
+/* Resume Stats Panel */
+.resume-stats {
+    margin-bottom: 20px;
+}
+
+.resume-stats-title {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6b7280;
+    margin-bottom: 14px;
+}
+
+.resume-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.resume-stat-block {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px 14px;
+    text-align: left;
+}
+
+.resume-stat-block--full {
+    grid-column: 1 / -1;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #9ca3af;
+    margin-bottom: 2px;
+}
+
+.stat-value {
+    font-size: 0.92rem;
+    color: #1f2937;
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+.category-tag {
+    background: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+
+.results-divider {
+    border: 0;
+    border-top: 1px solid #e5e7eb;
+    margin: 20px 0;
+}
+
+/* Mode Toggle */
+.mode-toggle {
+    display: flex;
+    background: white;
+    border-radius: 10px;
+    padding: 5px;
+    margin-bottom: 35px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+    gap: 4px;
+}
+
+.toggle-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 7px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    background: transparent;
+    color: #6b7280;
+    transition: all 0.2s ease;
+}
+
+.toggle-btn.active {
+    background: #2563eb;
+    color: white;
+}
+
+.toggle-btn:not(.active):hover {
+    background: #f3f4f6;
+    color: #1f2937;
+}
+
+/* Sub-scores */
+.sub-scores {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.sub-score-item {
+    flex: 1;
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+    border: 1px solid #e5e7eb;
+}
+
+.sub-score-label {
+    display: block;
+    font-size: 0.75rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.sub-score-value {
+    display: block;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1d4ed8;
+}
+
+/* Skill tags */
+.covered-skills-section {
+    text-align: left;
+    margin-top: 20px;
+}
+
+.covered-skills-section h4 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6b7280;
+    margin-bottom: 10px;
+}
+
+.skill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.skill-tag {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+
+.skill-tag--missing {
+    background: #fef2f2;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+/* Job card enhancements */
+.job-card-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+}
+
+.job-score {
+    background: #1d4ed8;
+    color: white;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+}
+
+.job-snippet {
+    font-size: 0.88rem;
+    color: #4b5563;
+    margin-bottom: 4px;
+    line-height: 1.4;
+}
+
+/* Spinner */
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #bfdbfe;
+    border-top-color: #2563eb;
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+    margin: 30px auto 16px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.spinner-label {
+    text-align: center;
+    color: #6b7280;
+    font-size: 0.95rem;
+}
+
+/* Collapsible skills */
+.skills-details summary {
+    cursor: pointer;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #9ca3af;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    user-select: none;
+}
+
+.skills-details summary::-webkit-details-marker { display: none; }
+
+.skills-details summary::before {
+    content: "▶";
+    font-size: 0.6rem;
+    transition: transform 0.2s ease;
+    color: #9ca3af;
+}
+
+.skills-details[open] summary::before {
+    transform: rotate(90deg);
+}
+
+.skills-details .skill-tags {
+    margin-top: 8px;
+}
+
 /* Score Display */
 .score-container {
     text-align: center;

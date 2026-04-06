@@ -15,6 +15,11 @@
 
     <main class="container">
 
+        <div class="mode-toggle">
+            <button id="findJobsToggle" class="toggle-btn active">Find Jobs</button>
+            <button id="checkMatchToggle" class="toggle-btn">Check Match</button>
+        </div>
+
         <section class="card upload-section">
             <h2>Upload Your Resume</h2>
 
@@ -32,18 +37,20 @@
             <p id="fileName" class="file-name"></p>
         </section>
 
-        <section class="card">
+        <section class="card" id="jobDescSection" style="display:none;">
             <h2>Enter Job Description</h2>
-            <textarea 
-                id="jobDescInput" 
-                placeholder="Paste a specific job description here to see your match score..." 
+            <textarea
+                id="jobDescInput"
+                placeholder="Paste a specific job description here to see your match score..."
                 rows="6"
             ></textarea>
-            
-            <button id="matchBtn" class="primary-btn" style="width: 100%; margin-top: 15px;">
-                Analyze Resume & Find Matches
-            </button>
         </section>
+
+        <div style="text-align:center; margin-bottom:35px;">
+            <button id="matchBtn" class="primary-btn" style="width:100%; max-width:850px;">
+                Find Matching Jobs
+            </button>
+        </div>
 
         <section class="card">
             <h2>Results</h2>
