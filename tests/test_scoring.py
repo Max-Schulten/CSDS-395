@@ -158,32 +158,39 @@ class TestSkillCoverage:
         from utils.scoring import skill_coverage
         res_emb = np.array([unit([1, 0, 0, 0])])
         job_emb = np.zeros((0, DIM))
-        assert skill_coverage(["python"], [], res_emb, job_emb) == 0.0
+        score, covered, unmatched = skill_coverage(["python"], [], res_emb, job_emb)
+        assert score == 0.0
 
     def test_no_match_below_tau_returns_zero(self):
         from utils.scoring import skill_coverage
         res_emb = np.array([unit([1, 0, 0, 0])])
         job_emb = np.array([unit([0, 1, 0, 0])])  # orthogonal → sim=0
-        assert skill_coverage(["python"], ["java"], res_emb, job_emb, tau=0.8) == 0.0
+        score, covered, unmatched = skill_coverage(["python"], ["java"], res_emb, job_emb, tau=0.8)
+        assert score == 0.0
+        assert unmatched == ["java"]
 
     def test_perfect_match_returns_one(self):
         from utils.scoring import skill_coverage
         v = unit([1, 0, 0, 0])
         res_emb = np.array([v])
         job_emb = np.array([v])
-        result = skill_coverage(["python"], ["python"], res_emb, job_emb, tau=0.0)
-        assert pytest.approx(result, abs=1e-6) == 1.0
+        score, covered, unmatched = skill_coverage(["python"], ["python"], res_emb, job_emb, tau=0.0)
+        assert pytest.approx(score, abs=1e-6) == 1.0
+        assert covered == ["python"]
+        assert unmatched == []
 
     def test_partial_coverage(self):
         from utils.scoring import skill_coverage
-        # resume has python; job needs python + java (orthogonal → no match)
+        # resume has python; job needs python + java (orthogonal → sim=0 < tau=0.5 → no match)
         v_py = unit([1, 0, 0, 0])
         v_java = unit([0, 1, 0, 0])
         res_emb = np.array([v_py])
         job_emb = np.array([v_py, v_java])
-        result = skill_coverage(["python"], ["python", "java"], res_emb, job_emb, tau=0.0)
-        # python matched perfectly (weight=1), java unmatched → coverage = 1/2
-        assert pytest.approx(result, abs=1e-6) == 0.5
+        score, covered, unmatched = skill_coverage(["python"], ["python", "java"], res_emb, job_emb, tau=0.5)
+        # python: weight(1.0, 0.5)=1.0; java: unmatched → coverage = 1/2
+        assert pytest.approx(score, abs=1e-6) == 0.5
+        assert "python" in covered
+        assert "java" in unmatched
 
     def test_best_resume_skill_wins_per_job_skill(self):
         """Two resume skills match the same job skill — higher sim wins."""
@@ -194,8 +201,8 @@ class TestSkillCoverage:
         v_res_low /= np.linalg.norm(v_res_low)
         res_emb = np.array([v_res_high, v_res_low])
         job_emb = np.array([v_job])
-        result = skill_coverage(["python", "py"], ["python"], res_emb, job_emb, tau=0.0)
-        assert pytest.approx(result, abs=1e-6) == 1.0
+        score, covered, unmatched = skill_coverage(["python", "py"], ["python"], res_emb, job_emb, tau=0.0)
+        assert pytest.approx(score, abs=1e-6) == 1.0
 
     def test_weight_formula_at_midpoint(self):
         """At sim = (1 + tau) / 2, weight should be 0.5."""
@@ -208,15 +215,15 @@ class TestSkillCoverage:
         v2 = np.array([sim, np.sqrt(1 - sim**2), 0.0, 0.0])
         res_emb = v1.reshape(1, -1)
         job_emb = v2.reshape(1, -1)
-        result = skill_coverage(["python"], ["python"], res_emb, job_emb, tau=tau)
+        score, _, _ = skill_coverage(["python"], ["python"], res_emb, job_emb, tau=tau)
         expected = (sim - tau) / (1.0 - tau)
-        assert pytest.approx(result, abs=1e-4) == expected
+        assert pytest.approx(score, abs=1e-4) == expected
 
     def test_returns_float(self):
         from utils.scoring import skill_coverage
         v = unit([1, 0, 0, 0])
-        result = skill_coverage(["python"], ["python"], v.reshape(1,-1), v.reshape(1,-1))
-        assert isinstance(result, float)
+        score, covered, unmatched = skill_coverage(["python"], ["python"], v.reshape(1,-1), v.reshape(1,-1))
+        assert isinstance(score, float)
 
 
 # ---------------------------------------------------------------------------

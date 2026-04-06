@@ -23,7 +23,7 @@ embedding_model = load_embedder()
 print("Embedder loaded")
 gliner = load_gliner()
 print("GliNER loaded")
-classifier = ResumeClassifier(model=load_classifier(), nlp_model=nlp, embedding_model=embedding_model)
+classifier = ResumeClassifier(model=load_classifier(), nlp_model=nlp)
 print("SVC Loaded")
 matcher = load_skills_matcher(nlp_model=nlp)
 print("Skills Matcher Loaded")
@@ -80,7 +80,7 @@ State University of Technology | B.S. in Computer Science
 Graduated May 2018
 """
 #%% Classifier Demo
-classifier = ResumeClassifier(model=load_classifier(), nlp_model=nlp, embedding_model=embedding_model)
+classifier = ResumeClassifier(model=load_classifier(), nlp_model=nlp)
 cleaned_resume = classifier.clean_resume(DUMMY_RESUME)
 print('-'*50)
 print('Raw Resume:')

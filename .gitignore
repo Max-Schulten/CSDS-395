@@ -103,3 +103,5 @@ docker-compose.override.yml
 # Demo files
 *.mov
 *.mp4
+
+.claude

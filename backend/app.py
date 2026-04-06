@@ -28,7 +28,7 @@ embedding_model = load_embedder()
 print("Embedder loaded")
 gliner = load_gliner()
 print("GliNER loaded")
-classifier = ResumeClassifier(model=load_classifier(), nlp_model=nlp, embedding_model=embedding_model)
+classifier = ResumeClassifier(model=load_classifier(), nlp_model=nlp)
 print("SVC Loaded")
 matcher = load_skills_matcher(nlp_model=nlp)
 print("Skills Matcher Loaded")
@@ -56,45 +56,27 @@ def search_jobs():
     
     jobs: list[Job] = find_jobs(
         resume=resume, 
-        classifier=classifier, 
         skill_extractor=skill_extractor
     )
     
-    scores = score(resume=resume, jobs=jobs)
-    
-    return jsonify({
-        "jobs": [],
-        "scores": [],
-        "skill_coverages": [],
-        "semantic_scores": [],
-        "education_coverages": []
-    })
+    return score(resume=resume, jobs=jobs, embedding_model=embedding_model)
 
-@app.route("/analyze-resume", methods=["POST"])
-def analyze_resume():
+@app.route("/score-job", methods=["POST"])
+def score_job():
     data = request.get_json()
     resume_text = data["resume_text"]
-    cleaned_resume = classifier.clean_resume(resume_text)
-    categories = classifier.classify_resume(cleaned_resume)
-    skills = skill_extractor.extract_skills(cleaned_resume)
-    return jsonify({
-        "cleaned_resume": cleaned_resume,
-        "education": "",
-        "categories": categories,
-        "skills": skills
-    })
-
-@app.route("/analyze-job", methods=["POST"])
-def analyze_job():
-    data = request.get_json()
-    job_desc = data["job_desc"]
-    clean_job_desc = clean_text(job_desc)
-    skills = skill_extractor.extract_skills(clean_job_desc)
-    return jsonify({
-        "cleaned_job_desc": clean_job_desc,
-        "skills": skills,
-        "education": ""
-    })
+    resume = Resume(
+        resume_text=resume_text,
+        classifier=classifier,
+        skill_extractor=skill_extractor
+    )
+    job_text = data["job_text"]
+    job = Job(
+        job_desc=job_text,
+        skill_extractor=skill_extractor
+    )
+    
+    return score(resume=resume, jobs=job, embedding_model=embedding_model)
 
 
 if __name__ == "__main__":

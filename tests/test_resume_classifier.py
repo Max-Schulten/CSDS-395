@@ -11,7 +11,7 @@ CLASSES = np.array([
     "Technology", "Engineering", "Finance & Accounting",
     "Business & Management", "Human & Social Services",
     "Sales & Marketing", "Creative & Design", "Health & Lifestyle",
-    "Building and Construction", "Aviation & Transport",
+    "Building & Construction", "Aviation & Transport",
     "Automobile", "Agriculture"
 ])
 
@@ -63,9 +63,8 @@ def mock_embedder():
 def classifier(mock_model, mock_nlp, mock_embedder):
     """ResumeClassifier with all dependencies injected — no I/O."""
     return ResumeClassifier(
-        model=mock_model,
+        model=(mock_embedder, mock_model),
         nlp_model=mock_nlp,
-        embedding_model=mock_embedder,
     )
 
 
@@ -123,9 +122,8 @@ class TestLoadEmbedder:
 class TestInit:
     def test_stores_injected_dependencies(self, mock_model, mock_nlp, mock_embedder):
         rc = ResumeClassifier(
-            model=mock_model,
+            model=(mock_embedder, mock_model),
             nlp_model=mock_nlp,
-            embedding_model=mock_embedder,
         )
         assert rc.model is mock_model
         assert rc.nlp is mock_nlp
@@ -135,17 +133,15 @@ class TestInit:
         # mock_nlp only has PERSON, ORG, GPE, LOC
         with pytest.raises(AssertionError, match="Invalid NER labels"):
             ResumeClassifier(
-                model=mock_model,
+                model=(mock_embedder, mock_model),
                 nlp_model=mock_nlp,
-                embedding_model=mock_embedder,
                 pii_entities=["PERSON", "INVALID_LABEL"],
             )
 
     def test_valid_pii_entities_accepted(self, mock_model, mock_nlp, mock_embedder):
         rc = ResumeClassifier(
-            model=mock_model,
+            model=(mock_embedder, mock_model),
             nlp_model=mock_nlp,
-            embedding_model=mock_embedder,
             pii_entities=["PERSON", "GPE"],
         )
         assert rc.entities == ["PERSON", "GPE"]
