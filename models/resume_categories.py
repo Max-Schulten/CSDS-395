@@ -7,6 +7,10 @@ This script is used to create, test, train, and evaluate a classifier
 that maps plain text résumés to a set of given categories.
 """
 #%% IMPORTS + CONFIG
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
 import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -19,12 +23,11 @@ from sklearn.pipeline import Pipeline
 import re
 import glob
 import spacy
-from sentence_transformers import SentenceTransformer
 import joblib
+from utils.resume_utils import SentenceTransformerVectorizer
 
 RS = 420
 SYNTH_INCLUDED = False
-EMBED = True
 SPACY_MODEL = "en_core_web_md"
 
 #%% DATA
@@ -76,20 +79,6 @@ class SpacyNormalizer(BaseEstimator, TransformerMixin):
         ]
 
 
-class SentenceTransformerVectorizer(BaseEstimator, TransformerMixin):
-    def __init__(self, model_name="all-MiniLM-L6-v2", batch_size=32):
-        self.model_name = model_name
-        self.batch_size = batch_size
-        self.model = SentenceTransformer(model_name)
-
-    def fit(self, X, y=None):
-        return self
-
-    def transform(self, X):
-        return self.model.encode(
-            list(X),
-            batch_size=self.batch_size
-        )
 
 def simple_normalize(docs):
     cleaned = []
@@ -112,39 +101,19 @@ def top_k_accuracy(pipeline, X, y_true, k=3):
 
 SimpleNormalizer = FunctionTransformer(simple_normalize)
 
-if EMBED:
-    embedder = SentenceTransformerVectorizer()
-    print("Embedding...")
-    X_tr_input = embedder.transform(X_tr)
-    X_te_input = embedder.transform(X_te)
-    print("Embedding Complete")
-    pipe = Pipeline([
-        ("clf", LinearSVC(max_iter=3000, random_state=RS)),
-    ])
-    param_grid = {
-        "clf__C": [0.2, 0.3, 0.4],
-        "clf__class_weight": ['balanced', None],
-        "clf__penalty": ['l1', 'l2']
-    }
-else:
-    X_tr_input = X_tr
-    X_te_input = X_te
-    pipe = Pipeline([
-        ("normalize", SimpleNormalizer),
-        ("tfidf", TfidfVectorizer(
-            ngram_range=(1, 3),
-            min_df=2,
-            max_df=0.95,
-            max_features=5_000
-        )),
-        ("clf", LinearSVC(class_weight='balanced', max_iter=3000, random_state=RS, C=0.5)),
-    ])
-    param_grid = {
-        "tfidf__ngram_range": [(1, 1), (1, 2), (1, 3)],
-        "tfidf__min_df": [2, 3, 5],
-        "tfidf__max_features": [3_000, 5_000, 10_000],
-        "clf__C": [0.1, 0.3, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 100.0],
-    }
+embedder = SentenceTransformerVectorizer()
+print("Embedding...")
+X_tr_input = embedder.transform(X_tr)
+X_te_input = embedder.transform(X_te)
+print("Embedding Complete")
+pipe = Pipeline([
+    ("clf", LinearSVC(max_iter=3000, random_state=RS))
+])
+param_grid = {
+    "clf__C": [0.4, 1, 10],
+    "clf__class_weight": ['balanced', None],
+    "clf__penalty": ['l2']
+}
 
 cv = StratifiedKFold(
     n_splits=5,
@@ -184,5 +153,10 @@ for k in ks:
     print(f"Top test {k} accuracy:")
     print(top_k_accuracy(best_pipe, X_te_input, y_te, k=k))
 
-#%% 
-joblib.dump(gs.best_estimator_, "./models/resume_classifier.joblib")
+
+#%% FINAL MODEL — retrain on full dataset with best params
+best_params = {k.replace("clf__", ""): v for k, v in gs.best_params_.items()}
+final_clf = LinearSVC(max_iter=3000, random_state=RS, **best_params)
+X_all_input = embedder.transform(X)
+final_clf.fit(X_all_input, y)
+joblib.dump((embedder, final_clf), "./models/resume_classifier.joblib")

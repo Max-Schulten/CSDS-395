@@ -69,13 +69,14 @@ CATEGORY_MAP = {
     "Automobile":                   "Automobile",
     "Aviation":                     "Aviation & Transport",
     "Agriculture":                  "Agriculture",
-    "Building and Construction":    "Building & Construction",
+    "Building and Construction":    "Building and Construction",
 }
 
 df['Mapped_Category'] = df['Category'].map(CATEGORY_MAP)
+df = df.dropna(subset=['Mapped_Category'])
 
 nlp = spacy.load(SPACY_MODEL)
-entities = ["PERSON", "GPE", "LOC"]
+entities = ["PERSON", "GPE", "LOC", "ORG"]
 
 ADDRESS_RE = re.compile(
     r'\b\d{1,3}(?!\d)\s+[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,3}'
@@ -115,12 +116,13 @@ def clean(texts, nlp, entities, NER=True):
 
         text = EMAIL_RE.sub('[EMAIL]', text)
         text = PHONE_RE.sub('[PHONE]', text)
-        text = POBOX_RE.sub('[ADDRESS]', text)
+        text = POBOX_RE.sub('[POBOX]', text)
         text = ADDRESS_RE.sub('[ADDRESS]', text)
         text = ZIP_RE.sub('[ZIP]', text)
         
         if not NER:
-            return text
+            cleaned.append(text)
+            continue
         doc = nlp(text)
         new_text = text
         for ent in reversed(doc.ents):
