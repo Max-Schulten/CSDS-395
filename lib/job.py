@@ -1,5 +1,5 @@
-from utils.skills_utils import SkillsExtractor
-from utils.gen_utils import clean_text
+from lib.skills_utils import SkillsExtractor
+from lib.gen_utils import clean_text
 
 class Job:
     def __init__(self, job_desc, skill_extractor: SkillsExtractor):

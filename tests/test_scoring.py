@@ -47,10 +47,10 @@ def make_job(skills=None, education=None, desc="job description"):
 # ---------------------------------------------------------------------------
 
 class TestEmbedDoc:
-    from utils.scoring import embed_doc
+    from lib.scoring import embed_doc
 
     def test_returns_tuple_of_array_and_list(self):
-        from utils.scoring import embed_doc
+        from lib.scoring import embed_doc
         emb = MagicMock()
         emb.encode.return_value = np.zeros((1, DIM))
         arr, snaps = embed_doc("short text", emb, window_size=30, stride=10)
@@ -58,7 +58,7 @@ class TestEmbedDoc:
         assert isinstance(snaps, list)
 
     def test_short_text_falls_back_to_full_text(self):
-        from utils.scoring import embed_doc
+        from lib.scoring import embed_doc
         emb = MagicMock()
         emb.encode.return_value = np.zeros((1, DIM))
         text = "only five words here"
@@ -66,7 +66,7 @@ class TestEmbedDoc:
         assert snaps == [text]
 
     def test_long_text_produces_multiple_snapshots(self):
-        from utils.scoring import embed_doc
+        from lib.scoring import embed_doc
         emb = MagicMock()
         emb.encode.side_effect = lambda s, **kw: np.zeros((len(s), DIM))
         tokens = ["word"] * 50
@@ -75,7 +75,7 @@ class TestEmbedDoc:
         assert len(snaps) > 1
 
     def test_exact_snapshot_count(self):
-        from utils.scoring import embed_doc
+        from lib.scoring import embed_doc
         emb = MagicMock()
         emb.encode.side_effect = lambda s, **kw: np.zeros((len(s), DIM))
         n_tokens, window, stride = 50, 10, 5
@@ -85,7 +85,7 @@ class TestEmbedDoc:
         assert len(snaps) == expected
 
     def test_multi_whitespace_handled(self):
-        from utils.scoring import embed_doc
+        from lib.scoring import embed_doc
         emb = MagicMock()
         emb.encode.return_value = np.zeros((1, DIM))
         # .split() (no arg) collapses all whitespace — should not crash
@@ -93,7 +93,7 @@ class TestEmbedDoc:
         assert len(snaps) == 1
 
     def test_encode_called_with_list(self):
-        from utils.scoring import embed_doc
+        from lib.scoring import embed_doc
         emb = MagicMock()
         emb.encode.return_value = np.zeros((1, DIM))
         embed_doc("some text", emb, window_size=30)
@@ -108,21 +108,21 @@ class TestEmbedDoc:
 class TestSemanticScore:
 
     def test_returns_scalar(self):
-        from utils.scoring import semantic_score
+        from lib.scoring import semantic_score
         res = np.array([unit([1, 0, 0, 0])])
         job = np.array([unit([1, 0, 0, 0])])
         result = semantic_score(res, job)
         assert np.isscalar(result) or result.ndim == 0
 
     def test_identical_embeddings_return_one(self):
-        from utils.scoring import semantic_score
+        from lib.scoring import semantic_score
         v = unit([1, 2, 3, 4])
         res = np.array([v])
         job = np.array([v])
         assert pytest.approx(float(semantic_score(res, job)), abs=1e-6) == 1.0
 
     def test_orthogonal_embeddings_return_zero(self):
-        from utils.scoring import semantic_score
+        from lib.scoring import semantic_score
         res = np.array([unit([1, 0, 0, 0])])
         job = np.array([unit([0, 1, 0, 0])])
         assert pytest.approx(float(semantic_score(res, job)), abs=1e-6) == 0.0
@@ -130,7 +130,7 @@ class TestSemanticScore:
     def test_jd_coverage_only_is_asymmetric(self):
         """Swapping resume and job embs should give a different result
         when the distributions are unequal."""
-        from utils.scoring import semantic_score
+        from lib.scoring import semantic_score
         res = np.array([unit([1, 0, 0, 0]), unit([0, 1, 0, 0])])
         job = np.array([unit([1, 0, 0, 0])])
         forward = float(semantic_score(res, job))   # 1 JD window vs 2 resume windows
@@ -138,7 +138,7 @@ class TestSemanticScore:
         assert forward != backward
 
     def test_score_in_unit_interval(self):
-        from utils.scoring import semantic_score
+        from lib.scoring import semantic_score
         rng = np.random.default_rng(42)
         res = rng.standard_normal((5, DIM))
         res /= np.linalg.norm(res, axis=1, keepdims=True)
@@ -155,14 +155,14 @@ class TestSemanticScore:
 class TestSkillCoverage:
 
     def test_empty_job_skills_returns_zero(self):
-        from utils.scoring import skill_coverage
+        from lib.scoring import skill_coverage
         res_emb = np.array([unit([1, 0, 0, 0])])
         job_emb = np.zeros((0, DIM))
         score, covered, unmatched = skill_coverage(["python"], [], res_emb, job_emb)
         assert score == 0.0
 
     def test_no_match_below_tau_returns_zero(self):
-        from utils.scoring import skill_coverage
+        from lib.scoring import skill_coverage
         res_emb = np.array([unit([1, 0, 0, 0])])
         job_emb = np.array([unit([0, 1, 0, 0])])  # orthogonal → sim=0
         score, covered, unmatched = skill_coverage(["python"], ["java"], res_emb, job_emb, tau=0.8)
@@ -170,7 +170,7 @@ class TestSkillCoverage:
         assert unmatched == ["java"]
 
     def test_perfect_match_returns_one(self):
-        from utils.scoring import skill_coverage
+        from lib.scoring import skill_coverage
         v = unit([1, 0, 0, 0])
         res_emb = np.array([v])
         job_emb = np.array([v])
@@ -180,7 +180,7 @@ class TestSkillCoverage:
         assert unmatched == []
 
     def test_partial_coverage(self):
-        from utils.scoring import skill_coverage
+        from lib.scoring import skill_coverage
         # resume has python; job needs python + java (orthogonal → sim=0 < tau=0.5 → no match)
         v_py = unit([1, 0, 0, 0])
         v_java = unit([0, 1, 0, 0])
@@ -194,7 +194,7 @@ class TestSkillCoverage:
 
     def test_best_resume_skill_wins_per_job_skill(self):
         """Two resume skills match the same job skill — higher sim wins."""
-        from utils.scoring import skill_coverage
+        from lib.scoring import skill_coverage
         v_job = unit([1, 0, 0, 0])
         v_res_high = unit([1, 0, 0, 0])        # sim=1.0 with job
         v_res_low  = unit([0.9, 0.1, 0.1, 0])  # lower sim
@@ -206,7 +206,7 @@ class TestSkillCoverage:
 
     def test_weight_formula_at_midpoint(self):
         """At sim = (1 + tau) / 2, weight should be 0.5."""
-        from utils.scoring import skill_coverage
+        from lib.scoring import skill_coverage
         tau = 0.8
         sim = (1.0 + tau) / 2  # 0.9
         # Construct two unit vectors with dot product = sim
@@ -220,7 +220,7 @@ class TestSkillCoverage:
         assert pytest.approx(score, abs=1e-4) == expected
 
     def test_returns_float(self):
-        from utils.scoring import skill_coverage
+        from lib.scoring import skill_coverage
         v = unit([1, 0, 0, 0])
         score, covered, unmatched = skill_coverage(["python"], ["python"], v.reshape(1,-1), v.reshape(1,-1))
         assert isinstance(score, float)
@@ -238,7 +238,7 @@ class TestEducationCoverage:
     # ── Degree scoring ────────────────────────────────────────────────────────
 
     def test_no_job_degree_gives_full_degree_score(self):
-        from utils.scoring import education_coverage
+        from lib.scoring import education_coverage
         emb = MagicMock()
         result = education_coverage(
             self._edu("bachelor's"), self._edu(None), emb
@@ -247,7 +247,7 @@ class TestEducationCoverage:
         assert pytest.approx(result, abs=1e-6) == 1.0
 
     def test_unknown_resume_degree_gives_partial(self):
-        from utils.scoring import education_coverage
+        from lib.scoring import education_coverage
         emb = MagicMock()
         result = education_coverage(
             self._edu(None), self._edu("bachelor's"), emb
@@ -256,7 +256,7 @@ class TestEducationCoverage:
         assert pytest.approx(result, abs=1e-6) == 0.65
 
     def test_exact_degree_match(self):
-        from utils.scoring import education_coverage
+        from lib.scoring import education_coverage
         emb = MagicMock()
         result = education_coverage(
             self._edu("bachelor's"), self._edu("bachelor's"), emb
@@ -264,7 +264,7 @@ class TestEducationCoverage:
         assert pytest.approx(result, abs=1e-6) == 1.0
 
     def test_resume_exceeds_job_degree(self):
-        from utils.scoring import education_coverage
+        from lib.scoring import education_coverage
         emb = MagicMock()
         result = education_coverage(
             self._edu("master's"), self._edu("bachelor's"), emb
@@ -272,7 +272,7 @@ class TestEducationCoverage:
         assert pytest.approx(result, abs=1e-6) == 1.0
 
     def test_one_level_under_gives_half_degree_score(self):
-        from utils.scoring import education_coverage
+        from lib.scoring import education_coverage
         emb = MagicMock()
         result = education_coverage(
             self._edu("bachelor's"), self._edu("master's"), emb
@@ -281,7 +281,7 @@ class TestEducationCoverage:
         assert pytest.approx(result, abs=1e-6) == 0.65
 
     def test_two_levels_under_gives_zero_degree_score(self):
-        from utils.scoring import education_coverage
+        from lib.scoring import education_coverage
         emb = MagicMock()
         result = education_coverage(
             self._edu("bachelor's"), self._edu("phd"), emb
@@ -292,7 +292,7 @@ class TestEducationCoverage:
     # ── Major scoring ─────────────────────────────────────────────────────────
 
     def test_no_job_majors_gives_full_major_score(self):
-        from utils.scoring import education_coverage
+        from lib.scoring import education_coverage
         emb = MagicMock()
         result = education_coverage(
             self._edu("bachelor's", ["computer science"]),
@@ -304,7 +304,7 @@ class TestEducationCoverage:
         assert pytest.approx(result, abs=1e-6) == 1.0
 
     def test_unknown_resume_majors_gives_partial_major_score(self):
-        from utils.scoring import education_coverage
+        from lib.scoring import education_coverage
         emb = MagicMock()
         result = education_coverage(
             self._edu("bachelor's", []),
@@ -316,7 +316,7 @@ class TestEducationCoverage:
         assert pytest.approx(result, abs=1e-6) == 0.85
 
     def test_major_above_edu_tau_counted(self):
-        from utils.scoring import education_coverage
+        from lib.scoring import education_coverage
         v = unit([1, 0, 0, 0])
         emb = MagicMock()
         emb.encode.return_value = np.array([v])  # job major emb
@@ -331,7 +331,7 @@ class TestEducationCoverage:
         assert pytest.approx(result, abs=1e-6) == 1.0
 
     def test_major_below_edu_tau_not_counted(self):
-        from utils.scoring import education_coverage
+        from lib.scoring import education_coverage
         v_res = unit([1, 0, 0, 0])
         v_job = unit([0, 1, 0, 0])  # orthogonal → sim=0
         emb = MagicMock()
@@ -347,7 +347,7 @@ class TestEducationCoverage:
         assert pytest.approx(result, abs=1e-6) == 0.7
 
     def test_final_score_is_weighted_combination(self):
-        from utils.scoring import education_coverage
+        from lib.scoring import education_coverage
         # degree one level under (score=0.5), no majors (score=1.0)
         emb = MagicMock()
         result = education_coverage(
@@ -356,7 +356,7 @@ class TestEducationCoverage:
         assert pytest.approx(result, abs=1e-6) == 0.7 * 0.5 + 0.3 * 1.0
 
     def test_partial_major_coverage_two_of_two(self):
-        from utils.scoring import education_coverage
+        from lib.scoring import education_coverage
         v = unit([1, 0, 0, 0])
         emb = MagicMock()
         # Both job majors embed to v; resume also embeds to v → both matched
@@ -372,7 +372,7 @@ class TestEducationCoverage:
         assert pytest.approx(result, abs=1e-6) == 1.0
 
     def test_partial_major_coverage_one_of_two(self):
-        from utils.scoring import education_coverage
+        from lib.scoring import education_coverage
         v_match = unit([1, 0, 0, 0])
         v_miss  = unit([0, 1, 0, 0])
         emb = MagicMock()
@@ -389,7 +389,7 @@ class TestEducationCoverage:
         assert pytest.approx(result, abs=1e-6) == 0.85
 
     def test_partial_major_coverage_zero_of_two(self):
-        from utils.scoring import education_coverage
+        from lib.scoring import education_coverage
         v_res = unit([1, 0, 0, 0])
         v_job = unit([0, 1, 0, 0])
         emb = MagicMock()
@@ -435,7 +435,7 @@ class TestScore:
         return resume, jobs, emb
 
     def test_output_has_expected_keys(self):
-        from utils.scoring import score
+        from lib.scoring import score
         resume, jobs, emb = self._make_inputs()
         result = score(resume, jobs, embedding_model=emb)
         for key in ("resume", "jobs", "skill_coverages", "semantic_scores",
@@ -443,13 +443,13 @@ class TestScore:
             assert key in result
 
     def test_single_job_accepted(self):
-        from utils.scoring import score
+        from lib.scoring import score
         resume, jobs, emb = self._make_inputs()
         result = score(resume, jobs[0], embedding_model=emb)
         assert len(result["scores"]) == 1
 
     def test_multiple_jobs_produce_matching_length_results(self):
-        from utils.scoring import score
+        from lib.scoring import score
         resume, jobs, emb = self._make_inputs(n_jobs=3)
         result = score(resume, jobs, embedding_model=emb)
         for key in ("jobs", "skill_coverages", "semantic_scores",
@@ -457,19 +457,19 @@ class TestScore:
             assert len(result[key]) == 3
 
     def test_invalid_weights_raise_assertion(self):
-        from utils.scoring import score
+        from lib.scoring import score
         resume, jobs, emb = self._make_inputs()
         with pytest.raises(AssertionError):
             score(resume, jobs, embedding_model=emb, alpha=0.5, beta=0.5, gamma=0.5)
 
     def test_scores_are_non_negative(self):
-        from utils.scoring import score
+        from lib.scoring import score
         resume, jobs, emb = self._make_inputs(n_jobs=2)
         result = score(resume, jobs, embedding_model=emb)
         assert all(s >= 0.0 for s in result["scores"])
 
     def test_resume_dict_included_in_output(self):
-        from utils.scoring import score
+        from lib.scoring import score
         resume, jobs, emb = self._make_inputs()
         result = score(resume, jobs, embedding_model=emb)
         assert result["resume"] == resume.to_dict()
@@ -501,7 +501,7 @@ class TestScoreSemiIntegration:
         return emb
 
     def test_perfect_match_scores_higher_than_mismatch(self):
-        from utils.scoring import score
+        from lib.scoring import score
 
         v_py  = np.array([1.0, 0.0, 0.0, 0.0])
         v_java = np.array([0.0, 1.0, 0.0, 0.0])
@@ -533,7 +533,7 @@ class TestScoreSemiIntegration:
         assert result["scores"][0] > result["scores"][1]
 
     def test_score_arithmetic_matches_manual_calculation(self):
-        from utils.scoring import score, skill_coverage, semantic_score, education_coverage
+        from lib.scoring import score, skill_coverage, semantic_score, education_coverage
 
         v = unit([1, 0, 0, 0])
         emb = MagicMock()
@@ -565,7 +565,7 @@ class TestScoreSemiIntegration:
     def test_higher_skill_weight_amplifies_skill_signal(self):
         """Skill gap = 1.0, semantic gap = 0.5.
         skill-heavy weighting should produce a wider total gap than sem-heavy."""
-        from utils.scoring import score
+        from lib.scoring import score
 
         v_py       = unit([1.0, 0.0,   0.0, 0.0])
         v_java     = unit([0.0, 1.0,   0.0, 0.0])   # orthogonal → skill_cov=0

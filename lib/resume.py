@@ -1,6 +1,6 @@
-from utils.resume_utils import ResumeClassifier
-from utils.skills_utils import SkillsExtractor
-from utils.gen_utils import load_classifier
+from lib.resume_utils import ResumeClassifier
+from lib.skills_utils import SkillsExtractor
+from lib.gen_utils import load_classifier
 
 class Resume:
     def __init__(self, resume_text, classifier: ResumeClassifier|None = None, skill_extractor: SkillsExtractor|None = None, gliner=None):

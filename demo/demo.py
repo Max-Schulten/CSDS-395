@@ -6,11 +6,11 @@ Created on Wed Mar  4 17:58:14 2026
 @author: maximilianschulten
 """
 #%% SETUP
-from utils.gen_utils import load_embedder, load_classifier, load_nlp, clean_text
+from lib.gen_utils import load_embedder, load_classifier, load_nlp, clean_text
 from config import BASE_DIR
-from utils.skills_utils import load_gliner
-from utils.resume_utils import ResumeClassifier
-from utils.skills_utils import SkillsExtractor, load_skills_matcher, load_skills_map
+from lib.skills_utils import load_gliner
+from lib.resume_utils import ResumeClassifier
+from lib.skills_utils import SkillsExtractor, load_skills_matcher, load_skills_map
 import os 
 print("Loading Skills Map...")
 skills_map = load_skills_map(os.path.join(BASE_DIR, "data/skill_map.json"))

@@ -2,7 +2,7 @@ import numpy as np
 import re
 from sklearn.base import BaseEstimator, TransformerMixin
 from sentence_transformers import SentenceTransformer
-from utils.gen_utils import load_classifier, load_nlp
+from lib.gen_utils import load_classifier, load_nlp
 
 
 class SentenceTransformerVectorizer(BaseEstimator, TransformerMixin):

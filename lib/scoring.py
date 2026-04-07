@@ -1,6 +1,6 @@
-from utils.resume import Resume
-from utils.job import Job
-from utils.gen_utils import load_embedder
+from lib.resume import Resume
+from lib.job import Job
+from lib.gen_utils import load_embedder
 import numpy as np
 
 def score(resume: Resume, jobs: list[Job] | Job, embedding_model = None, alpha=0.4, beta=0.4, gamma=0.2, tau=0.6, window_size=30, stride=10, floor=0.5) -> dict[str, str | list[str] | list[float]]:

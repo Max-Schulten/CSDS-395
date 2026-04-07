@@ -4,7 +4,7 @@ from spacy.matcher import PhraseMatcher
 from config import BASE_DIR
 import os
 from gliner import GLiNER
-from utils.gen_utils import load_nlp
+from lib.gen_utils import load_nlp
 
 # Maps regex patterns (case-insensitive) to canonical degree level strings.
 # Order matters — more specific / longer patterns must come before shorter ones

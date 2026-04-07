@@ -38,7 +38,7 @@ def matcher(nlp, simple_skills_map):
 @pytest.fixture
 def extractor(nlp, matcher):
     """SkillsExtractor with injected nlp and matcher — no I/O."""
-    from utils.skills_utils import SkillsExtractor
+    from lib.skills_utils import SkillsExtractor
     return SkillsExtractor(nlp=nlp, matcher=matcher)
 
 
@@ -48,19 +48,19 @@ def extractor(nlp, matcher):
 
 class TestLoadSkillsMap:
     def test_returns_dict_on_valid_file(self, tmp_path, simple_skills_map):
-        from utils.skills_utils import load_skills_map
+        from lib.skills_utils import load_skills_map
         p = tmp_path / "skill_map.json"
         p.write_text(json.dumps(simple_skills_map))
         result = load_skills_map(str(p))
         assert result == simple_skills_map
 
     def test_raises_on_missing_file(self, tmp_path):
-        from utils.skills_utils import load_skills_map
+        from lib.skills_utils import load_skills_map
         with pytest.raises(FileNotFoundError, match="Skills map json was not found"):
             load_skills_map(str(tmp_path / "nonexistent.json"))
 
     def test_raises_on_invalid_json(self, tmp_path):
-        from utils.skills_utils import load_skills_map
+        from lib.skills_utils import load_skills_map
         p = tmp_path / "bad.json"
         p.write_text("not valid json {{{")
         with pytest.raises(Exception):
@@ -74,14 +74,14 @@ class TestLoadSkillsMap:
 class TestLoadSkillsMatcher:
     
     def test_returns_phrase_matcher(self, nlp, tmp_path, simple_skills_map):
-        from utils.skills_utils import load_skills_matcher
+        from lib.skills_utils import load_skills_matcher
         p = tmp_path / "skill_map.json"
         p.write_text(json.dumps(simple_skills_map))
         result = load_skills_matcher(nlp_model=nlp, skills_map=simple_skills_map)
         assert isinstance(result, PhraseMatcher)
 
     def test_matcher_finds_known_skill(self, nlp, tmp_path, simple_skills_map):
-        from utils.skills_utils import load_skills_matcher
+        from lib.skills_utils import load_skills_matcher
         p = tmp_path / "skill_map.json"
         p.write_text(json.dumps(simple_skills_map))
         m = load_skills_matcher(nlp_model=nlp, skills_map=simple_skills_map)
@@ -92,7 +92,7 @@ class TestLoadSkillsMatcher:
         assert "docker" in matched_texts
 
     def test_loads_nlp_if_not_provided(self, tmp_path, simple_skills_map):
-        from utils.skills_utils import load_skills_matcher
+        from lib.skills_utils import load_skills_matcher
         p = tmp_path / "skill_map.json"
         p.write_text(json.dumps(simple_skills_map))
         mock_nlp = MagicMock()
@@ -109,7 +109,7 @@ class TestLoadSkillsMatcher:
 
 class TestSkillsExtractorInit:
     def test_adds_sentencizer_if_missing(self, nlp, matcher):
-        from utils.skills_utils import SkillsExtractor
+        from lib.skills_utils import SkillsExtractor
         # ensure sentencizer not present
         if nlp.has_pipe("sentencizer"):
             nlp.remove_pipe("sentencizer")
@@ -117,19 +117,19 @@ class TestSkillsExtractorInit:
         assert ex.nlp.has_pipe("sentencizer")
 
     def test_does_not_add_duplicate_sentencizer(self, nlp, matcher):
-        from utils.skills_utils import SkillsExtractor
+        from lib.skills_utils import SkillsExtractor
         if not nlp.has_pipe("sentencizer"):
             nlp.add_pipe("sentencizer", first=True)
         ex = SkillsExtractor(nlp=nlp, matcher=matcher)
         assert ex.nlp.pipe_names.count("sentencizer") == 1
 
     def test_uses_injected_matcher(self, nlp, matcher):
-        from utils.skills_utils import SkillsExtractor
+        from lib.skills_utils import SkillsExtractor
         ex = SkillsExtractor(nlp=nlp, matcher=matcher)
         assert ex.matcher is matcher
 
     def test_uses_injected_nlp(self, nlp, matcher):
-        from utils.skills_utils import SkillsExtractor
+        from lib.skills_utils import SkillsExtractor
         ex = SkillsExtractor(nlp=nlp, matcher=matcher)
         assert ex.nlp is nlp
 

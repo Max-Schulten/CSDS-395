@@ -24,7 +24,7 @@ import re
 import glob
 import spacy
 import joblib
-from utils.resume_utils import SentenceTransformerVectorizer
+from lib.resume_utils import SentenceTransformerVectorizer
 
 RS = 420
 SYNTH_INCLUDED = False
