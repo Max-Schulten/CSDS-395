@@ -1,0 +1,48 @@
+Jordan M. Calloway
+Cleveland, OH · (216) 555-0194 · jordan.calloway@email.com · linkedin.com/in/jordancalloway
+
+SUMMARY
+Detail-oriented business analyst with a background in data analysis, process improvement, and stakeholder communication. Proficient in SQL, Excel, and Tableau; experienced with Agile methodologies through internship and academic project work. Eager to translate data into actionable insights that support business decision-making.
+
+EXPERIENCE
+
+Business Analyst Intern
+KeyBank · Cleveland, OH | Jun 2023 – Aug 2023
+- Analyzed customer onboarding data using SQL and Excel to identify a 14% drop-off rate in the digital account setup flow, leading to a UX redesign recommendation adopted by the product team.
+- Assisted in writing and validating 30+ user stories in Jira for a mobile banking feature sprint, collaborating with developers, QA, and product owners.
+- Built a Tableau dashboard tracking weekly KPIs for the retail banking division, reducing manual reporting time by approximately 5 hours per week.
+- Participated in daily standups and two-week sprint reviews as part of an Agile development team.
+
+Operations & Data Intern
+Cleveland Metroparks · Cleveland, OH | May 2022 – Aug 2022
+- Compiled and cleaned seasonal visitor data across 18 park reservations, identifying peak-hour patterns that informed summer staffing decisions.
+- Created an Excel-based tracking tool for facility maintenance requests, replacing a paper-based process and cutting average resolution time by 20%.
+- Prepared weekly summary reports distributed to department managers; received commendation for clarity and consistency.
+
+EDUCATION
+
+B.S. in Business Administration, Information Systems
+Case Western Reserve University · Cleveland, OH | May 2024 | GPA: 3.6 / 4.0
+Relevant coursework: Database Management, Business Statistics, Systems Analysis & Design, Project Management, Financial Accounting
+
+PROJECTS
+
+E-Commerce Process Audit · Capstone Project
+- Led a 4-person team in mapping and auditing the order fulfillment workflow for a simulated retail client, producing a 28-page requirements document and a gap analysis.
+- Designed a future-state process flow using BPMN notation that projected a 30% reduction in manual handling steps.
+
+Cleveland Housing Market Analysis · Independent
+- Scraped and cleaned 3,000+ property listings using Python (pandas), then visualized price-per-sqft trends by neighborhood in Tableau.
+- Presented findings to a local housing nonprofit as a volunteer analytical contribution.
+
+SKILLS
+
+Analytics & Tools: SQL, Excel (PivotTables, VLOOKUP), Tableau, Power BI (basic), Python (pandas)
+Methodologies: Agile/Scrum, BPMN, requirements gathering, process mapping, gap analysis
+Software: Jira, Confluence, Microsoft Office Suite, Google Workspace
+Communication: Stakeholder interviews, user stories, executive presentations, technical writing
+
+CERTIFICATIONS & ACTIVITIES
+- Google Data Analytics Professional Certificate (Coursera, 2023)
+- CBAP Fundamentals Workshop – IIBA student chapter (2024)
+- President, Business Analytics Club, CWRU (2022–2024)

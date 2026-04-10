@@ -105,3 +105,5 @@ docker-compose.override.yml
 *.mp4
 
 .claude
+
+/experiments/dist_data
