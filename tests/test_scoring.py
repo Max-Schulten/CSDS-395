@@ -114,18 +114,24 @@ class TestSemanticScore:
         result = semantic_score(res, job)
         assert np.isscalar(result) or result.ndim == 0
 
-    def test_identical_embeddings_return_one(self):
+    def test_identical_embeddings_return_high_score(self):
+        """Identical embeddings produce max cosine similarity (1.0); CDF maps this to a high score."""
         from lib.scoring import semantic_score
+        from scipy.stats import norm
         v = unit([1, 2, 3, 4])
         res = np.array([v])
         job = np.array([v])
-        assert pytest.approx(float(semantic_score(res, job)), abs=1e-6) == 1.0
+        expected = float(norm(0.34515426).cdf(1.0))
+        assert pytest.approx(float(semantic_score(res, job)), abs=1e-4) == expected
 
-    def test_orthogonal_embeddings_return_zero(self):
+    def test_orthogonal_embeddings_return_low_score(self):
+        """Orthogonal embeddings produce cosine similarity 0.0; CDF maps this to a low score."""
         from lib.scoring import semantic_score
+        from scipy.stats import norm
         res = np.array([unit([1, 0, 0, 0])])
         job = np.array([unit([0, 1, 0, 0])])
-        assert pytest.approx(float(semantic_score(res, job)), abs=1e-6) == 0.0
+        expected = float(norm(0.34515426).cdf(0.0))
+        assert pytest.approx(float(semantic_score(res, job)), abs=1e-4) == expected
 
     def test_jd_coverage_only_is_asymmetric(self):
         """Swapping resume and job embs should give a different result
@@ -204,20 +210,24 @@ class TestSkillCoverage:
         score, covered, unmatched = skill_coverage(["python", "py"], ["python"], res_emb, job_emb, tau=0.0)
         assert pytest.approx(score, abs=1e-6) == 1.0
 
-    def test_weight_formula_at_midpoint(self):
-        """At sim = (1 + tau) / 2, weight should be 0.5."""
+    def test_weight_step_function(self):
+        """weight() is a two-level step: returns 1 above the midpoint threshold, tau below."""
         from lib.scoring import skill_coverage
         tau = 0.8
-        sim = (1.0 + tau) / 2  # 0.9
-        # Construct two unit vectors with dot product = sim
+        midpoint = tau + (1 - tau) / 2  # 0.9 — boundary is exclusive (> not >=)
+
+        # sim just above midpoint → weight = 1 → coverage = 1.0
+        sim_high = midpoint + 1e-6
         v1 = np.array([1.0, 0.0, 0.0, 0.0])
-        # v2 such that v1·v2 = sim: v2 = [sim, sqrt(1-sim^2), 0, 0]
-        v2 = np.array([sim, np.sqrt(1 - sim**2), 0.0, 0.0])
-        res_emb = v1.reshape(1, -1)
-        job_emb = v2.reshape(1, -1)
-        score, _, _ = skill_coverage(["python"], ["python"], res_emb, job_emb, tau=tau)
-        expected = (sim - tau) / (1.0 - tau)
-        assert pytest.approx(score, abs=1e-4) == expected
+        v2_high = np.array([sim_high, np.sqrt(max(0, 1 - sim_high**2)), 0.0, 0.0])
+        score_high, _, _ = skill_coverage(["python"], ["python"], v1.reshape(1, -1), v2_high.reshape(1, -1), tau=tau)
+        assert pytest.approx(score_high, abs=1e-4) == 1.0
+
+        # sim at midpoint (not above) → weight = tau → coverage = tau
+        sim_low = midpoint
+        v2_low = np.array([sim_low, np.sqrt(max(0, 1 - sim_low**2)), 0.0, 0.0])
+        score_low, _, _ = skill_coverage(["python"], ["python"], v1.reshape(1, -1), v2_low.reshape(1, -1), tau=tau)
+        assert pytest.approx(score_low, abs=1e-4) == tau
 
     def test_returns_float(self):
         from lib.scoring import skill_coverage

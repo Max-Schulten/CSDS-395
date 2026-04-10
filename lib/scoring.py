@@ -81,7 +81,7 @@ def skill_coverage(resume_skills, job_skills, resume_skills_emb, job_skills_emb,
             job_skill_scores[js] = score_
 
     def weight(score_, tau):
-        if score_ > (tau+((1-tau)/2)):
+        if score_ > (tau + ((1 - tau) / 2)):
             return 1
         else:
             return tau

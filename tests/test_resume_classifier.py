@@ -74,14 +74,14 @@ def classifier(mock_model, mock_nlp, mock_embedder):
 class TestLoadClassifier:
     def test_raises_if_model_not_found(self):
         from lib.gen_utils import load_classifier
-        with patch("utils.gen_utils.os.path.exists", return_value=False):
+        with patch("lib.gen_utils.os.path.exists", return_value=False):
             with pytest.raises(FileNotFoundError, match="No model found"):
                 load_classifier()
 
     def test_returns_model_when_file_exists(self, mock_model):
         from lib.gen_utils import load_classifier
-        with patch("utils.gen_utils.os.path.exists", return_value=True), \
-             patch("utils.gen_utils.joblib.load", return_value=mock_model):
+        with patch("lib.gen_utils.os.path.exists", return_value=True), \
+             patch("lib.gen_utils.joblib.load", return_value=mock_model):
             result = load_classifier()
             assert result is mock_model
 
@@ -89,14 +89,14 @@ class TestLoadClassifier:
 class TestLoadNlp:
     def test_raises_if_spacy_model_not_installed(self):
         from lib.gen_utils import load_nlp
-        with patch("utils.gen_utils.spacy.util.is_package", return_value=False):
+        with patch("lib.gen_utils.spacy.util.is_package", return_value=False):
             with pytest.raises(OSError, match="not installed"):
                 load_nlp()
 
     def test_returns_nlp_when_installed(self, mock_nlp):
         from lib.gen_utils import load_nlp
-        with patch("utils.gen_utils.spacy.util.is_package", return_value=True), \
-             patch("utils.gen_utils.spacy.load", return_value=mock_nlp):
+        with patch("lib.gen_utils.spacy.util.is_package", return_value=True), \
+             patch("lib.gen_utils.spacy.load", return_value=mock_nlp):
             result = load_nlp()
             assert result is mock_nlp
 
@@ -105,14 +105,14 @@ class TestLoadEmbedder:
     def test_raises_on_invalid_model(self):
         from lib.gen_utils import load_embedder
         from huggingface_hub.errors import RepositoryNotFoundError
-        with patch("utils.gen_utils.model_info", side_effect=RepositoryNotFoundError("")):
+        with patch("lib.gen_utils.model_info", side_effect=RepositoryNotFoundError("")):
             with pytest.raises(ValueError, match="not a valid SentenceTransformer"):
                 load_embedder(model="not-a-real-model")
 
     def test_returns_embedder_on_valid_model(self, mock_embedder):
         from lib.gen_utils import load_embedder
-        with patch("utils.gen_utils.model_info"), \
-             patch("utils.gen_utils.SentenceTransformer", return_value=mock_embedder):
+        with patch("lib.gen_utils.model_info"), \
+             patch("lib.gen_utils.SentenceTransformer", return_value=mock_embedder):
             result = load_embedder()
             assert result is mock_embedder
 

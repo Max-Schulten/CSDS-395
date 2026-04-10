@@ -145,7 +145,7 @@ class SkillsExtractor:
         if use_spacy:
             for _, start, end in self.matcher(doc):  # type: ignore
                 skill_text = doc[start:end].text.lower()
-                skill = self.skills_map[skill_text]
+                skill = self.skills_map.get(skill_text, skill_text)
                 if skill not in seen:
                     seen.add(skill)
                     skills[skill] = [start, end]
@@ -197,3 +197,13 @@ class SkillsExtractor:
         education = {"degree": education_level, "majors": majors}
 
         return skills, education
+
+    def extract_skills(self, text: str, use_gliner: bool = True) -> dict[str, list[int]]:
+        """Extract skills from text. Wraps extract_all for backwards compatibility."""
+        skills, _ = self.extract_all(text, use_gliner=use_gliner, use_spacy=True)
+        return skills
+
+    def extract_education(self, text: str) -> dict:
+        """Extract education (degree + majors) from text. Wraps extract_all for backwards compatibility."""
+        _, education = self.extract_all(text, use_gliner=True, use_spacy=False)
+        return education

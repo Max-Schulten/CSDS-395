@@ -98,7 +98,7 @@ class TestLoadSkillsMatcher:
         mock_nlp = MagicMock()
         mock_nlp.vocab = spacy.load("en_core_web_sm").vocab
         mock_nlp.make_doc = spacy.load("en_core_web_sm").make_doc
-        with patch("utils.skills_utils.load_nlp", return_value=mock_nlp):
+        with patch("lib.skills_utils.load_nlp", return_value=mock_nlp):
             result = load_skills_matcher(nlp_model=None, skills_map=simple_skills_map)
         assert isinstance(result, PhraseMatcher)
 
