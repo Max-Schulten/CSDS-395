@@ -310,8 +310,29 @@ textarea:focus {
 /* Job card enhancements */
 .job-card-header {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
     margin-bottom: 8px;
+}
+
+.job-title {
+    display: block;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+    text-decoration: none;
+}
+
+a.job-title:hover {
+    color: #2563eb;
+    text-decoration: underline;
+}
+
+.job-meta {
+    font-size: 0.82rem;
+    color: #6b7280;
+    margin-top: 2px;
 }
 
 .job-score {
@@ -321,6 +342,8 @@ textarea:focus {
     font-weight: 600;
     padding: 3px 10px;
     border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .job-snippet {
@@ -380,6 +403,40 @@ textarea:focus {
 
 .skills-details .skill-tags {
     margin-top: 8px;
+}
+
+/* Slider */
+.slider-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+input[type="range"] {
+    flex: 1;
+    accent-color: #2563eb;
+    cursor: pointer;
+    height: 4px;
+}
+
+.slider-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1d4ed8;
+    min-width: 32px;
+    text-align: right;
+}
+
+.slider-warning {
+    margin-top: 12px;
+    font-size: 0.88rem;
+    color: #92400e;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+    padding: 8px 12px;
+    text-align: left;
 }
 
 /* Score Display */

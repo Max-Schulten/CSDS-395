@@ -46,6 +46,17 @@
             ></textarea>
         </section>
 
+        <section class="card" id="nJobsSection">
+            <h2>Opportunities to Fetch</h2>
+            <div class="slider-row">
+                <input type="range" id="nJobsSlider" min="1" max="25" value="10" step="1">
+                <span id="nJobsValue" class="slider-value">10</span>
+            </div>
+            <p id="nJobsWarning" class="slider-warning" style="display:none;">
+                ⚠ Fetching more than 15 results may take noticeably longer.
+            </p>
+        </section>
+
         <div style="text-align:center; margin-bottom:35px;">
             <button id="matchBtn" class="primary-btn" style="width:100%; max-width:850px;">
                 Find Matching Jobs

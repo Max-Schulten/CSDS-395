@@ -95,15 +95,31 @@ class SkillsExtractor:
         chunk_sents: list = []
         chunk_char_start = 0
 
+        def process_chunk(chunk_text: str, abs_start: int):
+            for ent in self.gliner.predict_entities(chunk_text, self._ALL_LABELS, threshold=threshold):
+                adjusted = dict(ent)
+                adjusted['start'] += abs_start
+                adjusted['end'] += abs_start
+                all_entities.append(adjusted)
+
         def flush(sents, start_char):
             if not sents:
                 return
             chunk_text = text[start_char:sents[-1].end_char]
-            for ent in self.gliner.predict_entities(chunk_text, self._ALL_LABELS, threshold=threshold):
-                adjusted = dict(ent)
-                adjusted['start'] += start_char
-                adjusted['end'] += start_char
-                all_entities.append(adjusted)
+            if len(chunk_text) <= chunk_size:
+                process_chunk(chunk_text, start_char)
+            else:
+                # Sentence exceeds chunk_size — sub-split at word boundaries
+                offset = 0
+                while offset < len(chunk_text):
+                    end = min(offset + chunk_size, len(chunk_text))
+                    if end < len(chunk_text):
+                        while end > offset and chunk_text[end] not in (' ', '\n', '\t'):
+                            end -= 1
+                        if end == offset:  # no whitespace found — hard cut
+                            end = min(offset + chunk_size, len(chunk_text))
+                    process_chunk(chunk_text[offset:end], start_char + offset)
+                    offset = end
 
         for sent in sentences:
             if chunk_sents and (sent.end_char - chunk_char_start) > chunk_size:

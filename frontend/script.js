@@ -7,6 +7,10 @@ const jobDescInput = document.getElementById("jobDescInput");
 const jobDescSection = document.getElementById("jobDescSection");
 const findJobsToggle = document.getElementById("findJobsToggle");
 const checkMatchToggle = document.getElementById("checkMatchToggle");
+const nJobsSection = document.getElementById("nJobsSection");
+const nJobsSlider = document.getElementById("nJobsSlider");
+const nJobsValue = document.getElementById("nJobsValue");
+const nJobsWarning = document.getElementById("nJobsWarning");
 
 let mode = "find-jobs"; // "find-jobs" | "check-match"
 
@@ -20,15 +24,24 @@ function setMode(newMode) {
         findJobsToggle.classList.add("active");
         checkMatchToggle.classList.remove("active");
         jobDescSection.style.display = "none";
+        nJobsSection.style.display = "block";
         matchBtn.textContent = "Find Matching Jobs";
     } else {
         checkMatchToggle.classList.add("active");
         findJobsToggle.classList.remove("active");
         jobDescSection.style.display = "block";
+        nJobsSection.style.display = "none";
         matchBtn.textContent = "Check My Match";
     }
     jobResults.innerHTML = '<p class="placeholder">Upload your resume to see recommended jobs and match scores.</p>';
 }
+
+// --- Slider ---
+nJobsSlider.addEventListener("input", () => {
+    const val = parseInt(nJobsSlider.value);
+    nJobsValue.textContent = val;
+    nJobsWarning.style.display = val > 15 ? "block" : "none";
+});
 
 // --- File upload ---
 uploadBtn.addEventListener("click", () => resumeInput.click());
@@ -71,7 +84,7 @@ matchBtn.addEventListener("click", async () => {
             const data = await postJSON("/score-job", { resume_text: resumeText, job_text: jobDescText });
             renderCheckMatch(data);
         } else {
-            const data = await postJSON("/find-jobs", { resume_text: resumeText });
+            const data = await fetchJobsStreaming({ resume_text: resumeText, n_jobs: parseInt(nJobsSlider.value) });
             renderFindJobs(data);
         }
         jobResults.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -81,7 +94,7 @@ matchBtn.addEventListener("click", async () => {
     }
 });
 
-// --- Fetch helper ---
+// --- Fetch helpers ---
 async function postJSON(url, body) {
     const res = await fetch(url, {
         method: "POST",
@@ -90,6 +103,43 @@ async function postJSON(url, body) {
     });
     if (!res.ok) throw new Error(`Server error: ${res.status}`);
     return res.json();
+}
+
+async function fetchJobsStreaming(body) {
+    const res = await fetch("/find-jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // SSE messages are separated by double newlines
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop(); // hold back last incomplete chunk
+
+        for (const part of parts) {
+            const line = part.trim();
+            if (!line.startsWith("data: ")) continue;
+            const event = JSON.parse(line.slice(6));
+            if (event.type === "status") {
+                const label = jobResults.querySelector(".spinner-label");
+                if (label) label.textContent = event.message;
+            } else if (event.type === "result") {
+                const { type, ...result } = event;
+                return result;
+            }
+        }
+    }
+    throw new Error("Stream ended without a result.");
 }
 
 // --- Renderers ---
@@ -158,11 +208,23 @@ function renderFindJobs(data) {
         const coveredSkills = (data.covered_skills[i] || []).slice(0, 5);
         const unmatchedSkills = (data.unmatched_skills[i] || []).slice(0, 3);
         const skillsHtml = buildSkillTags(coveredSkills, unmatchedSkills);
-        const snippet = job.job_desc ? job.job_desc.slice(0, 150) + "…" : "";
+        const snippet = job.job_desc ? job.job_desc.slice(0, 200) + "…" : "";
+
+        const title = job.job_title || "Untitled Position";
+        const company = job.company || null;
+        const location = job.location || null;
+        const meta = [company, location].filter(Boolean).join(" · ");
+        const titleHtml = job.url
+            ? `<a class="job-title" href="${job.url}" target="_blank" rel="noopener noreferrer">${title}</a>`
+            : `<span class="job-title">${title}</span>`;
 
         return `
             <div class="job-card">
                 <div class="job-card-header">
+                    <div>
+                        ${titleHtml}
+                        ${meta ? `<p class="job-meta">${meta}</p>` : ""}
+                    </div>
                     <span class="job-score">${pct}% Match</span>
                 </div>
                 <p class="job-snippet">${snippet}</p>

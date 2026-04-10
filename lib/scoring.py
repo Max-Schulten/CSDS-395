@@ -2,6 +2,7 @@ from lib.resume import Resume
 from lib.job import Job
 from lib.gen_utils import load_embedder
 import numpy as np
+from scipy.stats import truncnorm, gmean, norm
 
 def score(resume: Resume, jobs: list[Job] | Job, embedding_model = None, alpha=0.4, beta=0.4, gamma=0.2, tau=0.6, window_size=30, stride=10, floor=0.5) -> dict[str, str | list[str] | list[float]]:
     embedding_model = embedding_model if embedding_model is not None else load_embedder()
@@ -44,7 +45,7 @@ def score(resume: Resume, jobs: list[Job] | Job, embedding_model = None, alpha=0
 
         # Semantic score; in [0,1]
         job_embs, job_snaps = embed_doc(job.job_desc, embedding_model=embedding_model, window_size=window_size, stride=stride)
-        sem_score = semantic_score(res_embs, job_embs, floor=floor)
+        sem_score = semantic_score(res_embs, job_embs)
         out["semantic_scores"].append(float(sem_score))
 
         # Education Coverage; in [0,1]
@@ -56,12 +57,13 @@ def score(resume: Resume, jobs: list[Job] | Job, embedding_model = None, alpha=0
         
     return out
 
-def semantic_score(resume_embs, job_embs, floor=0.5):
-    sim_mat = job_embs @ resume_embs.T # type: ignore
+def semantic_score(resume_embs, job_embs, mu=np.float32(0.34515426), sigma=np.float32(0.06738636)):
+    sim_mat = job_embs @ resume_embs.T
     best_per_window = sim_mat.max(axis=1)
-    if floor > 0.0:
-        best_per_window = best_per_window[best_per_window >= floor]
-    return best_per_window.mean() if len(best_per_window) > 0 else 0.0
+    mean = np.average(best_per_window)
+    score = norm(mu).cdf(mean) # Mean and std dev derived from empirical distribution estimation
+    return score
+
     
 def skill_coverage(resume_skills, job_skills, resume_skills_emb, job_skills_emb, tau=0.6):
     sim_matrix = resume_skills_emb @ job_skills_emb.T

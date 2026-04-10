@@ -1,3 +1,4 @@
+import html as _html
 import spacy
 from config import BASE_DIR
 import os
@@ -19,7 +20,7 @@ def load_classifier(model_path: str = os.path.join(BASE_DIR, "models/resume_clas
     model = joblib.load(model_path)
     return model
 
-def load_embedder(model: str = "all-MiniLM-L6-v2"):
+def load_embedder(model: str = "all-MiniLM-L6-v2") -> SentenceTransformer:
     try:
         model_info(f"sentence-transformers/{model}")
     except RepositoryNotFoundError:
@@ -34,3 +35,7 @@ def clean_text(text: str):
     text = re.sub(r'[^a-zA-Z0-9\s\.\,\-\/\(\)\@\+]', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
     return text
+
+def clean_html(raw: str) -> str:
+    stripped = re.sub(r"<[^>]+>", " ", raw or "")
+    return re.sub(r'\s+', ' ', _html.unescape(stripped)).strip()
