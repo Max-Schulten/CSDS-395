@@ -27,7 +27,8 @@ import joblib
 from lib.resume_utils import SentenceTransformerVectorizer
 
 RS = 420
-SYNTH_INCLUDED = False
+SYNTH_INCLUDED = True
+SYNTH_MODEL = "Qwen7B"
 SPACY_MODEL = "en_core_web_md"
 
 #%% DATA
@@ -55,8 +56,23 @@ print("Testing label distribution:")
 print(y_te.value_counts())
 
 if SYNTH_INCLUDED:
-    synth_files = glob.glob("./data/synthetic_resumes/*.csv")
+    def strip_label_header(text, category):
+        """Remove first line if it leaks the category label (common in small-model outputs)."""
+        lines = text.splitlines()
+        for i, line in enumerate(lines):
+            stripped = re.sub(r"[*_`#]", "", line).strip()
+            if stripped and category.lower() in stripped.lower():
+                lines[i] = ""
+                break
+            elif stripped:
+                break  # first non-empty line doesn't contain label — leave as-is
+        return "\n".join(lines).lstrip()
+
+    synth_files = glob.glob(f"./data/synthetic_resumes/{SYNTH_MODEL}/*.csv")
     synth_df = pd.concat([pd.read_csv(f) for f in synth_files], ignore_index=True)
+    synth_df['Resume_str'] = synth_df.apply(
+        lambda row: strip_label_header(row['Resume_str'], row['Category']), axis=1
+    )
     X_tr = pd.concat([X_tr, synth_df['Resume_str']], ignore_index=True)
     y_tr = pd.concat([y_tr, synth_df['Category']], ignore_index=True)
     print(f"Synthetic data included: {len(synth_df)} additional training samples")
@@ -77,8 +93,6 @@ class SpacyNormalizer(BaseEstimator, TransformerMixin):
             " ".join([token.lemma_.lower() for token in doc if not token.is_stop and token.is_alpha])
             for doc in docs
         ]
-
-
 
 def simple_normalize(docs):
     cleaned = []
@@ -110,7 +124,7 @@ pipe = Pipeline([
     ("clf", LinearSVC(max_iter=3000, random_state=RS))
 ])
 param_grid = {
-    "clf__C": [0.4, 1, 10],
+    "clf__C": [0.4, 1, 2, 10],
     "clf__class_weight": ['balanced', None],
     "clf__penalty": ['l2']
 }
@@ -157,6 +171,6 @@ for k in ks:
 #%% FINAL MODEL — retrain on full dataset with best params
 best_params = {k.replace("clf__", ""): v for k, v in gs.best_params_.items()}
 final_clf = LinearSVC(max_iter=3000, random_state=RS, **best_params)
-X_all_input = embedder.transform(X)
-final_clf.fit(X_all_input, y)
+X_all_input = embedder.transform(pd.concat([X_tr, X_te]))
+final_clf.fit(X_all_input, pd.concat([y_tr, y_te]))
 joblib.dump((embedder, final_clf), "./models/resume_classifier.joblib")

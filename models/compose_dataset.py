@@ -72,6 +72,8 @@ CATEGORY_MAP = {
     "Building and Construction":    "Building and Construction",
 }
 
+
+
 df['Mapped_Category'] = df['Category'].map(CATEGORY_MAP)
 df = df.dropna(subset=['Mapped_Category'])
 
