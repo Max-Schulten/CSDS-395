@@ -1,0 +1,5 @@
+Semantic Scores from 25.800 combos reports:
+    Skewness: -0.0086
+    Kurtosis: 0.1882
+    Shapiro p: 4.103332081736162e-08
+    Statistic: 0.9993563529060597
