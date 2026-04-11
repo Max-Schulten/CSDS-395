@@ -3,3 +3,5 @@ omit =
     backend/app.py
     models/*
     conftest.py
+    experiments/*
+    demo/*
