@@ -1,0 +1,5 @@
+[run]
+omit =
+    backend/app.py
+    models/*
+    conftest.py
