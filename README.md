@@ -1,5 +1,6 @@
 # Senior Project in Computer Science/Data Science
 ## Authors: Jack Alberto (jia15), Tommaso Beretta (txb341), William Hugus (wmh42), Maximilian Schulten (mls384), Nathaniel Hahn (nrh51)
+[![codecov](https://codecov.io/gh/Max-Schulten/CSDS-395/branch/main/graph/badge.svg)](https://codecov.io/gh/Max-Schulten/CSDS-395)
 # Running the Application
 ## Install Dependencies
 In a Python virtual environment or otherwise using pip:
