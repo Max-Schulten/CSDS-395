@@ -1,0 +1,89 @@
+name: skillsync
+
+services:
+  app:
+    build:
+      # Build context is the repo root so the Dockerfile can COPY the entire
+      # repo (lib/, frontend/, config.py, requirements.txt, models/, data/).
+      context: .
+      dockerfile: backend/Dockerfile
+
+    image: skillsync-app:latest
+
+    # Restart automatically on crash or host reboot, but honor an explicit
+    # `docker compose stop`.
+    restart: unless-stopped
+
+    ports:
+      - "8000:5000"
+
+    # API keys and external-service credentials are read from the .env file at
+    # the repo root.  They are injected as environment variables at runtime and
+    # are never baked into the image.
+    env_file:
+      - .env
+
+    volumes:
+      # Bind-mount models/ and data/ so large files (resume_classifier.joblib,
+      # skill_map.json) are read from the host rather than duplicated inside the
+      # image layers.  Using absolute-style named paths (/app/models etc.) keeps
+      # the mount targets consistent with BASE_DIR = /app inside the container.
+      #
+      # Read-only mounts (":ro") prevent the container from accidentally
+      # modifying trained models or reference data.
+      - type: bind
+        source: ./models
+        target: /app/models
+        read_only: true
+
+      - type: bind
+        source: ./data
+        target: /app/data
+        read_only: true
+
+    # Hugging Face caches the sentence-transformers model after the first
+    # download.  Persisting this cache in a named volume prevents a full
+    # re-download every time the container is recreated.
+    # sentence-transformers respects the HF_HOME env var for cache location.
+      - hf-cache:/app/.cache/huggingface
+
+    environment:
+      # Override any value from .env or the Dockerfile ENV defaults here.
+      # Hugging Face model cache — kept in the named volume above.
+      HF_HOME: /app/.cache/huggingface
+
+      # Silence the tokenizers parallelism warning that fires when forking
+      # inside a container that already loaded HuggingFace tokenizers.
+      TOKENIZERS_PARALLELISM: "false"
+
+    # The health check is defined in the Dockerfile.  Expressing it here as
+    # well would override the Dockerfile definition, so we leave it there and
+    # only configure startup ordering if additional services are added later.
+
+    # Resource soft limits — adjust to your host.  These prevent a runaway
+    # model-load from consuming all host memory without hard-killing the process.
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 1G
+
+    networks:
+      - internal
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Named volumes
+# ──────────────────────────────────────────────────────────────────────────────
+volumes:
+  # Persists the Hugging Face model cache (sentence-transformers weights) across
+  # container restarts so the ~90 MB download only happens once.
+  hf-cache:
+    driver: local
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Networks
+# ──────────────────────────────────────────────────────────────────────────────
+networks:
+  internal:
+    driver: bridge

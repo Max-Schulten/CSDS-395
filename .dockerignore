@@ -1,0 +1,79 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# .dockerignore — controls what is sent to the Docker build daemon.
+#
+# A lean build context speeds up `docker build` and prevents secrets or large
+# binary blobs from accidentally appearing in image layers.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Secrets — never send to the build daemon; injected at runtime via env_file.
+.env
+.env.*
+*.pem
+*.key
+
+# Python byte-code and caches
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Dependency lock-files that are not requirements.txt
+Pipfile
+Pipfile.lock
+poetry.lock
+pyproject.toml
+
+# Test artefacts — not needed at runtime
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.coveragerc
+
+# Editor / IDE metadata
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Docker files themselves (no need to include them in the image)
+Dockerfile
+**/Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# CI/CD configuration
+.github/
+.circleci/
+.travis.yml
+Jenkinsfile
+
+# Documentation
+*.md
+docs/
+
+# Large model and data files — these are bind-mounted at runtime by
+# docker-compose, so they must not be baked into the image layer.
+# If the image must be fully self-contained (no compose), comment these out.
+models/
+data/
+
+# Jupyter notebooks and scratch files
+*.ipynb
+notebooks/
+scratch/
+demo/
