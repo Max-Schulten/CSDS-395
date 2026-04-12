@@ -4,7 +4,7 @@ from lib.gen_utils import load_embedder
 import numpy as np
 from scipy.stats import truncnorm, gmean, norm
 
-def score(resume: Resume, jobs: list[Job] | Job, embedding_model = None, alpha=0.4, beta=0.4, gamma=0.2, tau=0.6, window_size=30, stride=10, floor=0.5) -> dict[str, str | list[str] | list[float]]:
+def score(resume: Resume, jobs: list[Job] | Job, embedding_model = None, alpha=0.4, beta=0.4, gamma=0.2, tau=0.6, window_size=30, stride=10) -> dict[str, str | list[str] | list[float]]:
     embedding_model = embedding_model if embedding_model is not None else load_embedder()
     out = {
         "resume": resume.to_dict(),
@@ -90,6 +90,7 @@ def skill_coverage(resume_skills, job_skills, resume_skills_emb, job_skills_emb,
         sum(weight(s, tau) for s in job_skill_scores.values()) / len(job_skills)
         if job_skills else 0.0
     )
+    coverage_score = np.sqrt(min(coverage_score/0.5, 1))
     covered_job_skills = list(job_skill_scores.keys())
     unmatched_job_skills = [js for js in job_skills if js not in job_skill_scores]
     return coverage_score, covered_job_skills, unmatched_job_skills
