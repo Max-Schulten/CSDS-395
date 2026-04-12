@@ -1,0 +1,231 @@
+ % !TEX program = lualatex
+ % https://github.com/andiac/gemini-cam
+% a fork of https://github.com/anishathalye/gemini
+
+\documentclass[final]{beamer}
+
+% ====================
+% Packages
+% ====================
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[size=custom,width=120,height=72,scale=1.0]{beamerposter}
+\usetheme{gemini}
+\usecolortheme{gemini}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.14}
+\usepackage{anyfontsize}
+
+% ====================
+% Lengths
+% ====================
+
+% If you have N columns, choose \sepwidth and \colwidth such that
+% (N+1)*\sepwidth + N*\colwidth = \paperwidth
+\newlength{\sepwidth}
+\newlength{\colwidth}
+\setlength{\sepwidth}{0.025\paperwidth}
+\setlength{\colwidth}{0.3\paperwidth}
+
+\newcommand{\separatorcolumn}{\begin{column}{\sepwidth}\end{column}}
+
+% ====================
+% Title
+% ====================
+
+\title{SkillSync: Explainable, Efficient, and Transparent Resume Evaluation} 
+
+\author{Maximilian Schulten \inst{1} \and Jack Alberto \inst{1} \and Tommaso Beretta \inst{1} \and William Hugus \inst{1} \and Nathaniel Hahn \inst{1} \and Dr. Shaui Xu\inst{1}}
+
+\institute[shortinst]{\inst{1} Case Western Reserve University School of Engineering, Department of Computer and Data Sciences} %\samelineand \inst{2} Another Institute}
+
+% ====================
+% Footer (optional)
+% ====================
+
+\footercontent{
+  \href{https://skillsync.com}{https://skillsync.com} \hfill
+  Intersections 2026, Cleveland OH \hfill
+\href{mailto:null@case.edu}{\{jia15, txb341, wmh42, mls384, nrh51, sxx214\}@case.edu}}
+% (can be left out to remove footer)
+
+% ====================
+% Logo (optional)
+% ====================
+% Refer to https://github.com/k4rtik/uchicago-poster
+% logo: https://communications.admin.ox.ac.uk/communications-resources/visual-identity/identity-guidelines/the-oxford-logo
+
+% replace with clear background
+\logoright{\includegraphics[height=7cm]{assets/cw_logo.png}}
+% \logoleft{\includegraphics[height=7cm]{logos/ox-logo.png}}
+
+% ====================
+% Body
+% ====================
+
+\begin{document}
+
+
+
+\begin{frame}[t]
+\begin{columns}[t]
+\separatorcolumn
+
+\begin{column}{\colwidth}
+
+  \begin{block}{Abstract}
+
+    Job searching is often a time consuming and inefficient process that relies heavily on user judgement to assess their own fit for each job opening. 
+    With the rise of online job boards that everyone can access, the online job market has become overly competitive in recent years. 
+    This project, SkillSync, develops a lightweight, privacy focused, and data driven system for matching resumes to job descriptions. 
+
+    The goal of this project is to automate and improve the user experience of job searching by generating a list of job openings for which the user is most qualified for. 
+    The system operates through a pipeline that includes skill extraction from the resume, job data aggregation, matching process, and generating the list of top matches. 
+  \end{block}
+
+  \begin{block}{System Outline}
+    
+      We divide \textbf{SkillSync} into four main steps:
+
+    \begin{enumerate}
+      \item \textbf{Skill Extraction} The user uploads a resume and the skills are extracted while personal identifiable information is removed.
+      \item \textbf{Job Aggregation} We query multiple APIs to maximize job opportunities; each job has key features extracted.
+      \item \textbf{Skill Matching} The skills extracted during step on are matched with the job features extracted in step two. Keyword search and a matching model are applied. 
+      \item \textbf{Match Presentation} We present a the ordered top matches to the user in a clean and functional UI.
+    \end{enumerate}
+
+  \end{block}
+
+  \begin{alertblock}{Skill Extraction and Preprocesssing}
+
+    The skill extraction modules contain the data cleaning, resume classifier and skill extraction, the result of this module is a full understanding of the users resume without and personally identifying information (PII).
+
+    \begin{itemize}
+      \item \textbf{Data Cleaning} Our pipeline strips non alphanumeric characters and uncommon puncutation along with extra whitespace. 
+          The expectation is that stripping whitespace only removes structural information and does not limit our ability to extract skills.
+          A combination of regular expressions and a named entity recognition model was used to recognize and obfuscate PII such as names, locations, emails, organizations, and phone numbers.
+          We understand implicit bias within trained models and chose to remove PII rather than subsitute psuedonyms.
+      \item \textbf{Resume Classification} To reduce the search space, we use the resume industry as a huristic for matching. 
+          We employ a simple linear support vector machine classifier (SVM) that classifies resumes into large industry buckets. 
+          Resumes are then pre-provessed using an embedding transformer model to create vectors that our model could predict on.
+          We mapped the resume categories to a broader 12 category set and then trained our classifier, resulting in a \textbf{>90\%} top-2 accuracy.
+      \item \textbf{Skill Extraction} We chose a hybrid approach using spaCy PhraseMatcher, 
+          a fast dictionary-based skill matching against 99k+ canonical skill terms and GliNER (Generalist NER Model), a bidirectional transformer. 
+          The PhraseMatcher allowed for rapid keyword matching while, GliNER allowed for semantic information to be extracted like education differences (BS, MS, PHD)
+          This was a difficult process due to some canidates providing enumerated lists of skills, while others chose to let their experience repersent their skills.
+
+  \end{itemize}
+    
+
+  \end{alertblock}
+
+\end{column}
+
+\separatorcolumn
+
+\begin{column}{\colwidth}
+
+  \begin{block}{System Architecture}
+
+    SkillSync is built as a three-tier web application. The frontend is a single-page interface where users paste their resume and receive a ranked list of job matches. It communicates
+  with a Flask backend that exposes two REST endpoints, /find-jobs for full pipeline execution and /score-job for scoring a single listing. The backend orchestrates a multi-stage NLP
+  pipeline: resume parsing and classification, job aggregation, skill extraction, and composite scoring. All components are containerized via Docker with memory limits set to the
+  resource demands of the embedded transformer models.
+
+
+  %%% add diagram here
+
+
+  \end{block}
+
+  \begin{block}{Data Aggregation}
+
+    Jobs are fetched asynchronously from eight external job boards: Jobicy, RemoteOK, The Muse, Himalayas, We Work Remotely, Findwork.dev, USAJobs, and Adzuna. These job boards provide coverage over the majority of the markert including: remote,
+  government, and general listings. Each source returns listings in its own schema; We normalize these into a unified Job object. Duplicates are removed by (title, company,
+  source) key before scoring. Skill extraction draws on a canonical skill map of 99,000+ terms alongside a GLiNER transformer model, giving the system broad vocabulary coverage without
+  relying on any single job board's taxonomy
+  \end{block}
+
+  \begin{block}{Front End}
+
+    The interface is minimal and clean, featuring a resume text input and a results panel. After submission, users see each job ranked by composite match score, with per-job breakdowns of
+  matched skills, unmatched skill gaps, and sub-scores for skill coverage, semantic similarity, and education alignment. This transparency lets users understand why a job ranked highly
+  rather than treating the score as a black box.
+
+  \end{block}
+
+\end{column}
+
+\separatorcolumn
+
+\begin{column}{\colwidth}
+
+  \begin{exampleblock}{Matching Model}
+    \small % Slightly smaller text to fit all the math on one slide
+    SkillSync scores each job listing against a parsed resume using a convex
+    combination of three complementary signals:
+
+    \begin{equation}
+        S_{\text{total}} = \alpha \cdot S_{\text{skill}} + \beta \cdot S_{\text{sem}} + \gamma \cdot S_{\text{edu}}, \quad \alpha + \beta + \gamma = 1
+    \end{equation}
+
+    Default weights: $\alpha = \beta = 0.4$, $\gamma = 0.2$.
+
+    \begin{itemize}
+        \item \textbf{Skill Coverage ($S_{\text{skill}}$)} \\
+        Uses {\tt all-MiniLM-L6-v2} embeddings and cosine similarity:
+        \begin{equation}
+            S_{\text{skill}} = \frac{1}{|J|} \sum_{j \in J} w\!\left(\max_{r \in R}\, \cos(e_j,\, e_r)\right)
+        \end{equation}
+        where $w(x)$ rewards matches above threshold $\tau = 0.6$.
+
+        \item \textbf{Semantic Similarity ($S_{\text{sem}}$)} \\
+        To capture contextual alignment beyond discrete skills, the resume and
+        job description are each segmented into overlapping windows of 30 tokens
+        with stride 10. The mean of per-window maximum cosine similarities
+        $\bar{s}$ is mapped to a calibrated score via a truncated normal CDF
+        fit empirically to 200 job--resume pairs ($\mu = 0.345,\; \sigma = 0.067$):
+
+        \begin{equation}
+            S_{\text{sem}} = \Phi_{\mu,\sigma}(\bar{s}), \quad \bar{s} = \frac{1}{|W_J|}\sum_{w \in W_J} \max_{v \in W_R} \cos(e_w, e_v)
+        \end{equation}
+
+        \item \textbf{Education Coverage ($S_{\text{edu}}$)} \\
+        Combines degree-level alignment and major similarity:
+        \begin{equation}
+            S_{\text{edu}} = 0.7 \cdot S_{\text{deg}} + 0.3 \cdot S_{\text{maj}}
+        \end{equation}
+    \end{itemize}
+
+    $S_{\text{deg}}$ is a hierarchical score (1.0 if the candidate meets or
+  exceeds the required degree level, 0.5 if one level below, 0.0 otherwise).
+  $S_{\text{maj}}$ is the cosine similarity between embedded major strings,
+  thresholded at $\tau_{\text{edu}} = 0.6$
+
+  \end{exampleblock}
+
+  \begin{block}{Testing and Results}
+
+  \end{block}
+
+  \begin{block}{Project Challenges}
+  \end{block}
+
+  \begin{block}{References and Relevant Classes}
+
+    \nocite{*}
+    \footnotesize{\bibliographystyle{plain}\bibliography{poster}}
+
+  \end{block}
+
+\end{column}
+
+\separatorcolumn
+\end{columns}
+\end{frame}
+
+\end{document}
