@@ -135,6 +135,36 @@
   with a Flask backend that exposes two REST endpoints, /find-jobs for full pipeline execution and /score-job for scoring a single listing. The backend orchestrates a multi-stage NLP
   pipeline: resume parsing and classification, job aggregation, skill extraction, and composite scoring. All components are containerized via Docker with memory limits set to the
   resource demands of the embedded transformer models.
+   % \begin{figure}
+   % \centering
+   %     \includegraphics[width=15cm]{assets/sys_arch.png}
+   %     \caption{System Architecture}
+
+   % \end{figure}
+
+    \begin{figure}{System Architecture and Examples}
+
+    \begin{columns}[c] % [c] centers the columns vertically
+        
+        % Left Pane: Single Image
+        \begin{column}{0.48\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{assets/sys_arch.png}
+            \captionof{System Architecure}
+        \end{column}
+
+        % Right Pane: 2x2 Grid
+        \begin{column}{0.48\textwidth}
+            \centering
+            % Row 1
+            \includegraphics[width=0.45\textwidth]{assets/sized_ex1.png}
+            \includegraphics[width=0.45\textwidth]{assets/sized_ex2.png}
+            
+            \captionof{Front End Examples}
+        \end{column}
+        
+    \end{columns}
+\end{figure}
 
 
   %%% add diagram here
