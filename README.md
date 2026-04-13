@@ -1,6 +1,11 @@
 # Senior Project in Computer Science/Data Science
 ## Authors: Jack Alberto (jia15), Tommaso Beretta (txb341), William Hugus (wmh42), Maximilian Schulten (mls384), Nathaniel Hahn (nrh51)
 [![codecov](https://codecov.io/gh/Max-Schulten/CSDS-395/branch/main/graph/badge.svg)](https://codecov.io/gh/Max-Schulten/CSDS-395)
+# Architecture of the App
+<p align="center">
+<img width="683" height="800" alt="architecture" src="https://github.com/Max-Schulten/CSDS-395/blob/main/project-assets/architecture.png"/>
+</p>
+
 # Running the application
 ## With Docker
 ### Building with Docker
@@ -43,5 +48,3 @@ From the base directory. This starts the Flask development server in debug mode,
 > ```bash
 > gunicorn --workers 1 --timeout 120 --bind 0.0.0.0:5000 backend.app:app
 > ```
-# Architecture of the App
-<img width="683" height="800" alt="architecture" src="https://github.com/user-attachments/assets/234097a7-a86f-4d19-b3d8-b2f8b68a9b49" />
