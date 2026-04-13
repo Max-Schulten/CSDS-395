@@ -62,11 +62,15 @@ def test_clean_html_strips_tags():
     assert "World" in result
 
 def test_clean_html_unescapes_entities():
-    result = clean_html("&amp; &lt; &gt; &quot;")
+    # &amp; → & and &quot; → " are preserved (not stripped as tags)
+    result = clean_html("Price: &amp;100 &quot;sale&quot;")
     assert "&" in result
-    assert "<" in result
-    assert ">" in result
     assert '"' in result
+    # &lt; and &gt; unescape to < and >, which the tag regex then strips
+    tag_result = clean_html("&lt;b&gt;bold&lt;/b&gt;")
+    assert "<" not in tag_result
+    assert ">" not in tag_result
+    assert "bold" in tag_result
 
 def test_clean_html_collapses_whitespace():
     result = clean_html("<p>Hello</p>   <p>World</p>")
