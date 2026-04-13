@@ -141,7 +141,7 @@
 
   \begin{block}{References and Relevant Classes}
 
-      CSDS 132, CSDS 133, CSDS 221, CSDS 233, CSDS 293, CSDS 310, CSDS 338, CSDS 240, CSDS 356, CSDS 391
+      CSDS 132, CSDS 133, CSDS 221, CSDS 233, CSDS 293, CSDS 310, CSDS 338, CSDS 340, CSDS 356, CSDS 391
 
     \nocite{*}
     \footnotesize{\bibliographystyle{plain}\bibliography{poster}}
@@ -188,6 +188,7 @@
             \includegraphics[width=0.45\textwidth]{assets/sized_ex2.png}
 
             \captionof{figure}{Front End Examples}
+             \label{fig:frontend}      
         \end{column}
 
     \end{columns}
@@ -198,7 +199,7 @@
 
 
   \end{block}
-
+\vspace{-2em}
   \begin{block}{Data Aggregation}
 
 \begin{figure}
@@ -222,7 +223,7 @@
             % Row 1
             \centering
             \includegraphics[width=6cm]{assets/data_agg.drawio.png}
-            \caption{Data Aggregation Pipeline}            
+            \caption{Data Aggregation Pipeline}   
         \end{column}
         
     \end{columns}
@@ -231,6 +232,7 @@
   \end{block}
 
   %% add diagram 
+  \vspace{-1em}
 
   \begin{block}{Front End}
 
@@ -238,6 +240,15 @@
   matched skills, unmatched skill gaps, and sub-scores for skill coverage, semantic similarity, and education alignment. This transparency lets users understand why a job ranked highly
   rather than treating the score as a black box.
 
+  \end{block}
+
+  \begin{block}{Project Challenges}
+  	\begin{itemize}
+  		\item Resume Classification: Sparse representations (TF-IDF, BoW) fail to capture semantic nuance in resume text; we instead used dense embeddings, yielding acceptable classification accuracy.
+  		\item Skill Extraction: We matched skills deterministically against the ESCO and O*NET databases, with a GLiNER model and embeddings handling fuzzy matches (e.g.\ Cloud infrastructure \& AWS).
+  		\item Composite Scoring: Scoring components lacked a shared $[0,1]$ co-domain; empirical calibration at each step produced interpretable outputs.
+  	\end{itemize}
+  	
   \end{block}
 
 \end{column}
@@ -259,7 +270,7 @@
 
     \begin{itemize}
         \item \textbf{Skill Coverage ($S_{\text{skill}}$)} \\
-        Matches deterministically from databases aggregated from O*NET and ESCOU alongside a fuzzy matching system leveraging {\tt all-MiniLM-L6-v2} embeddings and cosine similarity:
+        Matches deterministically from databases aggregated from O*NET and ESCO alongside a fuzzy matching system leveraging {\tt all-MiniLM-L6-v2} embeddings and cosine similarity:
         \begin{equation}
             S_{\text{skill}} = \tilde{\sigma}\left(\frac{1}{|J|} \sum_{j \in J} w\!\left(\max_{r \in R}\, \cos(e_j,\, e_r)\right)\right)
         \end{equation}
@@ -292,19 +303,24 @@
 
 
   \begin{block}{Testing and Results}
-    Our project features a full pytest suite meant to ensure consistent development among a multi-person team and deployment verification. 
+    Our project features a full pytest suite meant to ensure consistent development among a multi-person team and deployment verification.
     These tests provide coverage across our entire build, preprocess, extract and inference modules allowing us to verify changes and catch bugs.
 
-    An example of our results are seen the in the front end demo, along with the figure below, which describes the approximate distribution of our pipeline on a random set of $25{,}800$ resume-job combinations.
-    
+    See the front end example in figure \ref{fig:frontend}, and below, which describes the approximate distribution of our pipeline for randomly paired jobs and resumes.
+
+    \begin{itemize}
+        \item \textbf{Score Distribution:} Total scores across 25k+ randomly paired job, resume combinations follow a somewhat normal distribution centered around 0.35, confirming the pipeline discriminates meaningfully rather than saturating at extremes. This center is expected as random to random matches are more likely to be poor matches when comparing across industries.
+        \item \textbf{Scoring Correlates:} Skill coverage and semantic similarity are positively correlated, validating that both signals capture complementary but consistent notions of fit. Education alignment shows lower correlation with the other two components, as expected.
+    \end{itemize}
+
     \begin{figure}
     \begin{columns}[c]
-        \begin{column}{0.4\textwidth}
+        \begin{column}{0.46\textwidth}
             \centering
             \includegraphics[width=\textwidth]{../experiments/figures/scores_dist.png}
             \captionof{figure}{Score Distribution}
         \end{column}
-        \begin{column}{0.58\textwidth}
+        \begin{column}{0.54\textwidth}
             \centering
             \includegraphics[width=\textwidth]{../experiments/figures/correlates.png}
             \captionof{figure}{Scoring Correlates}
@@ -313,14 +329,9 @@
     \end{figure}
 
 
-
   \end{block}
- \begin{block}{Project Challenges}
-    \end{block}
-
-
-
   
+
 
 \end{column}
 
