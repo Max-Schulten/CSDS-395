@@ -21,7 +21,7 @@ def _sigmoid_rescale(x, k=5, midpoint=0.15):
     hi = 1.0 / (1.0 + np.exp(-k * (1.0 - midpoint)))
     return (1.0 / (1.0 + np.exp(-k * (x - midpoint))) - lo) / (hi - lo)
 
-def score(resume: Resume, jobs: list[Job] | Job, embedding_model = None, alpha=0.4, beta=0.5, gamma=0.1, tau=0.6, window_size=30, stride=10) -> dict[str, str | list[str] | list[float]]:
+def score(resume: Resume, jobs: list[Job] | Job, embedding_model = None, alpha=0.45, beta=0.45, gamma=0.1, tau=0.6, window_size=30, stride=10) -> dict[str, str | list[str] | list[float]]:
     embedding_model = embedding_model if embedding_model is not None else load_embedder()
     out = {
         "resume": resume.to_dict(),
@@ -83,6 +83,10 @@ def semantic_score(resume_embs, job_embs, mu=np.float32(0.34515426), sigma=np.fl
 
     
 def skill_coverage(resume_skills, job_skills, resume_skills_emb, job_skills_emb, tau=0.6):
+    if not job_skills:
+        return 0.0, [], []
+    if not resume_skills:
+        return 0.0, [], list(job_skills)
     sim_matrix = resume_skills_emb @ job_skills_emb.T
     match_mask = sim_matrix >= tau
     

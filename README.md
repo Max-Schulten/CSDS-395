@@ -37,6 +37,11 @@ The easiest start is running:
 ```bash
 python backend/app.py
 ```
-From the base directory. This starts the flask server in debug mode, and after a moment serves the app @ `http://localhost:5000`
+From the base directory. This starts the Flask development server in debug mode, and after a moment serves the app @ `http://localhost:5000`
+
+> **Note**: The Docker image runs Gunicorn instead of the Flask dev server. To replicate that locally:
+> ```bash
+> gunicorn --workers 1 --timeout 120 --bind 0.0.0.0:5000 backend.app:app
+> ```
 # Architecture of the App
 <img width="683" height="800" alt="architecture" src="https://github.com/user-attachments/assets/234097a7-a86f-4d19-b3d8-b2f8b68a9b49" />

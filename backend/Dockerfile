@@ -84,9 +84,6 @@ ENV PYTHONUNBUFFERED=1
 
 # Flask configuration — host 0.0.0.0 is required so the port is reachable from
 # outside the container; debug is off in the container image.
-ENV FLASK_APP=backend/app.py
-ENV FLASK_RUN_HOST=0.0.0.0
-ENV FLASK_RUN_PORT=5000
 ENV FLASK_DEBUG=0
 
 EXPOSE 5000
@@ -99,5 +96,9 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
 
 USER appuser
 
-# Use exec form so the process receives SIGTERM directly (no shell wrapper).
-CMD ["python", "-m", "flask", "run"]
+# Gunicorn with 1 sync worker — each worker is a separate process with its
+# own copy of all models, so there is no shared-state risk between requests.
+# A single worker keeps peak memory within the 4 GB compose limit; add a
+# second worker only if the memory limit is raised to ~6–8 GB.
+# --timeout 120 covers the slow first-request model-warm-up window.
+CMD ["gunicorn", "--workers", "2", "--timeout", "120", "--bind", "0.0.0.0:5000", "backend.app:app"]

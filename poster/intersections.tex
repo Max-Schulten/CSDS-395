@@ -28,6 +28,7 @@
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.14}
 \usepackage{anyfontsize}
+\usepackage{caption}
 
 % ====================
 % Lengths
@@ -57,7 +58,7 @@
 % ====================
 
 \footercontent{
-  \href{https://skillsync.com}{https://skillsync.com} \hfill
+  SkillSync \hfill
   Intersections 2026, Cleveland OH \hfill
 \href{mailto:null@case.edu}{\{jia15, txb341, wmh42, mls384, nrh51, sxx214\}@case.edu}}
 % (can be left out to remove footer)
@@ -115,13 +116,12 @@
 
     \begin{itemize}
       \item \textbf{Data Cleaning} Our pipeline strips non alphanumeric characters and uncommon puncutation along with extra whitespace. 
-          The expectation is that stripping whitespace only removes structural information and does not limit our ability to extract skills.
-          A combination of regular expressions and a named entity recognition model was used to recognize and obfuscate PII such as names, locations, emails, organizations, and phone numbers.
+          The expectation is that whitespace represents a fragile signal at best, and removing it does not limit our ability to extract skills.
+          Regular expressions and two named entity recognition models wwere used to recognize and obfuscate PII such as names, locations, emails, organizations, and phone numbers.
           We understand implicit bias within trained models and chose to remove PII rather than subsitute psuedonyms.
-      \item \textbf{Resume Classification} To reduce the search space, we use the resume industry as a huristic for matching. 
-          We employ a simple linear support vector machine classifier (SVM) that classifies resumes into large industry buckets. 
-          Resumes are then pre-provessed using an embedding transformer model to create vectors that our model could predict on.
-          We mapped the resume categories to a broader 12 category set and then trained our classifier, resulting in a \textbf{>90\%} top-2 accuracy.
+      \item \textbf{Resume Classification} To reduce the search space, we use the resume industry as a heuristic filtering step for potential matches. 
+          We employ a linear support vector machine classifier (SVM) with $l2$ regularization to place resumes into industry buckets, trained on dense vector representations of resumes generated using an embedding model. 
+          Raw training data contained granular categories with relatively small supports. In turn, we choose to map these onto 12 broader industry level categories, under which our classifier achieves a top-2 accuracy of $~88\%$ on a holdout validation set. 
       \item \textbf{Skill Extraction} We chose a hybrid approach using spaCy PhraseMatcher, 
           a fast dictionary-based skill matching against 99k+ canonical skill terms and GliNER (Generalist NER Model), a bidirectional transformer. 
           The PhraseMatcher allowed for rapid keyword matching while, GliNER allowed for semantic information to be extracted like education differences (BS, MS, PHD)
@@ -151,15 +151,15 @@
 
    % \end{figure}
 
-    \begin{figure}{System Architecture and Examples}
+    \begin{figure}
 
     \begin{columns}[c] % [c] centers the columns vertically
-        
+
         % Left Pane: Single Image
         \begin{column}{0.48\textwidth}
             \centering
-            \includegraphics[width=\textwidth]{assets/sys_arch.png}
-            \captionof{System Architecure}
+            \includegraphics[width=\textwidth]{../project-assets/architecture.png}
+            \captionof{figure}{System Architecture}
         \end{column}
 
         % Right Pane: 2x2 Grid
@@ -168,10 +168,10 @@
             % Row 1
             \includegraphics[width=0.45\textwidth]{assets/sized_ex1.png}
             \includegraphics[width=0.45\textwidth]{assets/sized_ex2.png}
-            
-            \captionof{Front End Examples}
+
+            \captionof{figure}{Front End Examples}
         \end{column}
-        
+
     \end{columns}
 \end{figure}
 
@@ -212,22 +212,22 @@
         S_{\text{total}} = \alpha \cdot S_{\text{skill}} + \beta \cdot S_{\text{sem}} + \gamma \cdot S_{\text{edu}}, \quad \alpha + \beta + \gamma = 1
     \end{equation}
 
-    Default weights: $\alpha = \beta = 0.4$, $\gamma = 0.2$.
+    Default weights: $\alpha = \beta = 0.45$, $\gamma = 0.1$.
 
     \begin{itemize}
         \item \textbf{Skill Coverage ($S_{\text{skill}}$)} \\
-        Uses {\tt all-MiniLM-L6-v2} embeddings and cosine similarity:
+        Matches deterministically from databases aggregated from O*NET and ESCOU alongside a fuzzy matching system leveraging {\tt all-MiniLM-L6-v2} embeddings and cosine similarity:
         \begin{equation}
-            S_{\text{skill}} = \frac{1}{|J|} \sum_{j \in J} w\!\left(\max_{r \in R}\, \cos(e_j,\, e_r)\right)
+            S_{\text{skill}} = \tilde{\sigma}\left(\frac{1}{|J|} \sum_{j \in J} w\!\left(\max_{r \in R}\, \cos(e_j,\, e_r)\right)\right)
         \end{equation}
-        where $w(x)$ rewards matches above threshold $\tau = 0.6$.
+        where $w(x)$ rewards matches above threshold $\tau = 0.6$, and $\tilde{\sigma}$ applies a shifted sigmoid function to ensure saturation at acceptable raw coverage values.
 
         \item \textbf{Semantic Similarity ($S_{\text{sem}}$)} \\
         To capture contextual alignment beyond discrete skills, the resume and
         job description are each segmented into overlapping windows of 30 tokens
         with stride 10. The mean of per-window maximum cosine similarities
-        $\bar{s}$ is mapped to a calibrated score via a truncated normal CDF
-        fit empirically to 200 job--resume pairs ($\mu = 0.345,\; \sigma = 0.067$):
+        $\bar{s}$ is mapped to a calibrated score via a normal CDF
+        fit empirically to 25k+ job--resume pairs ($\mu = 0.345,\; \sigma = 0.067$):
 
         \begin{equation}
             S_{\text{sem}} = \Phi_{\mu,\sigma}(\bar{s}), \quad \bar{s} = \frac{1}{|W_J|}\sum_{w \in W_J} \max_{v \in W_R} \cos(e_w, e_v)
@@ -251,13 +251,21 @@
   \begin{block}{Testing and Results}
     Our project features a full pytest suite meant to ensure consistent development among a multi-person team and deployment verification. These tests provide coverage across our entire build, preprocess, extract and inference modules allowing us to verify changes and catch bugs.
 
-    An example of our results are seen the in the front end demo, along with the figure below, which describes a test between different resumes against a buisness job description.
+    An example of our results are seen the in the front end demo, along with the figure below, which describes the approximate distribution of our pipeline on a random set of $25{,}800$ resume-job combinations.
     
     \begin{figure}
-    \centering
-        \includegraphics[width=15cm]{assets/sys_arch.png}
-        \caption{place holder}
-
+    \begin{columns}[c]
+        \begin{column}{0.4\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{../experiments/figures/scores_dist.png}
+            \captionof{figure}{Score Distribution}
+        \end{column}
+        \begin{column}{0.58\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{../experiments/figures/correlates.png}
+            \captionof{figure}{Scoring Correlates}
+        \end{column}
+    \end{columns}
     \end{figure}
 
 
@@ -266,7 +274,7 @@
 
   \begin{block}{References and Relevant Classes}
 
-      CSDS 132, CSDS 133, CSDS 221, CSDS 233, CSDS 293, CSDS 310, CSDS 338, CSDS 240, CSDS 356, CSDS 391
+      CSDS 132, CSDS 133, CSDS 221, CSDS 233, CSDS 293, CSDS 310, CSDS 338, CSDS 240, CSDS 340, CSDS 356, CSDS 391
 
     \nocite{*}
     \footnotesize{\bibliographystyle{plain}\bibliography{poster}}

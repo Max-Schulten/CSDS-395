@@ -77,3 +77,20 @@ data/
 notebooks/
 scratch/
 demo/
+
+# LaTeX auxiliary files
+poster/
+*.aux
+*.nav
+*.out
+*.snm
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.bbl
+*.blg
+*.bcf
+*.run.xml
+*.lof
+*.lot

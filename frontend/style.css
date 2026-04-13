@@ -346,6 +346,23 @@ a.job-title:hover {
     flex-shrink: 0;
 }
 
+.job-sub-scores {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.job-sub-score-badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #4b5563;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    padding: 2px 9px;
+}
+
 .job-snippet {
     font-size: 0.88rem;
     color: #4b5563;
@@ -462,4 +479,49 @@ input[type="range"] {
     text-transform: uppercase;
     letter-spacing: 1px;
     font-size: 0.9rem;
+}
+
+/* Footer */
+.footer {
+    background: #1f2937;
+    color: #9ca3af;
+    text-align: center;
+    padding: 36px 20px;
+    margin-top: 60px;
+    font-size: 0.88rem;
+}
+
+.footer-privacy {
+    color: #d1d5db;
+    margin-bottom: 20px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+}
+
+.footer-sources-label {
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-bottom: 10px;
+}
+
+.footer-sources {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 16px;
+}
+
+.footer-sources li {
+    color: #9ca3af;
+}
+
+.footer-sources li + li::before {
+    content: "·";
+    margin-right: 16px;
+    color: #4b5563;
 }

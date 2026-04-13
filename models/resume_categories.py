@@ -138,7 +138,7 @@ cv = StratifiedKFold(
 gs = GridSearchCV(
     pipe,
     param_grid=param_grid,
-    scoring="f1_macro",
+    scoring="accuracy",
     cv=cv,
     n_jobs=-1,
     verbose=2

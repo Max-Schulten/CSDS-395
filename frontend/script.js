@@ -205,6 +205,9 @@ function renderFindJobs(data) {
     const cards = indices.map(i => {
         const job = data.jobs[i];
         const pct = Math.round(data.scores[i] * 100);
+        const skillPct = Math.round((data.skill_coverages[i] || 0) * 100);
+        const semPct = Math.round((data.semantic_scores[i] || 0) * 100);
+        const eduPct = Math.round((data.education_coverages[i] || 0) * 100);
         const coveredSkills = (data.covered_skills[i] || []).slice(0, 5);
         const unmatchedSkills = (data.unmatched_skills[i] || []).slice(0, 3);
         const skillsHtml = buildSkillTags(coveredSkills, unmatchedSkills);
@@ -226,6 +229,11 @@ function renderFindJobs(data) {
                         ${meta ? `<p class="job-meta">${meta}</p>` : ""}
                     </div>
                     <span class="job-score">${pct}% Match</span>
+                </div>
+                <div class="job-sub-scores">
+                    <span class="job-sub-score-badge">Skills: ${skillPct}%</span>
+                    <span class="job-sub-score-badge">Semantic: ${semPct}%</span>
+                    <span class="job-sub-score-badge">Education: ${eduPct}%</span>
                 </div>
                 <p class="job-snippet">${snippet}</p>
                 ${skillsHtml ? `<div class="skill-tags" style="margin-top:8px;">${skillsHtml}</div>` : ""}

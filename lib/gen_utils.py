@@ -37,5 +37,6 @@ def clean_text(text: str):
     return text
 
 def clean_html(raw: str) -> str:
-    stripped = re.sub(r"<[^>]+>", " ", raw or "")
-    return re.sub(r'\s+', ' ', _html.unescape(stripped)).strip()
+    unescaped = _html.unescape(raw or "")
+    stripped = re.sub(r"<[^>]+>", " ", unescaped)
+    return re.sub(r'\s+', ' ', stripped).strip()
