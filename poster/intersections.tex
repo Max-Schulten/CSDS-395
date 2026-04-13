@@ -70,7 +70,7 @@
 % logo: https://communications.admin.ox.ac.uk/communications-resources/visual-identity/identity-guidelines/the-oxford-logo
 
 % replace with clear background -- and higher quality image
-\logoright{\includegraphics[height=3cm]{assets/cwru_logo.png}}
+\logoright{\includegraphics[height=3cm]{assets/black_cw.png}}
 % \logoleft{\includegraphics[height=7cm]{logos/ox-logo.png}}
 
 % ====================
@@ -102,10 +102,10 @@
       We divide \textbf{SkillSync} into four main steps:
 
     \begin{enumerate}
-      \item \textbf{Skill Extraction} The user uploads a resume and the skills are extracted while personal identifiable information is removed.
-      \item \textbf{Job Aggregation} We query multiple APIs to maximize job opportunities; each job has key features extracted.
-      \item \textbf{Skill Matching} The skills extracted during step on are matched with the job features extracted in step two. Keyword search and a matching model are applied. 
-      \item \textbf{Match Presentation} We present a the ordered top matches to the user in a clean and functional UI.
+      \item \textbf{Skill Extraction:} The user uploads a resume and the skills are extracted while personal identifiable information is removed.
+      \item \textbf{Job Aggregation:} We query multiple APIs to maximize job opportunities; each job has key features extracted.
+      \item \textbf{Skill Matching:} The skills extracted during step on are matched with the job features extracted in step two. Keyword search and a matching model are applied. 
+      \item \textbf{Match Presentation:} We present the ordered top matches to the user in a clean and functional UI.
     \end{enumerate}
 
   \end{block}
@@ -115,22 +115,39 @@
     The skill extraction modules contain the data cleaning, resume classifier and skill extraction, the result of this module is a full understanding of the users resume without and personally identifying information (PII).
 
     \begin{itemize}
-      \item \textbf{Data Cleaning} Our pipeline strips non alphanumeric characters and uncommon puncutation along with extra whitespace. 
-          The expectation is that whitespace represents a fragile signal at best, and removing it does not limit our ability to extract skills.
-          Regular expressions and two named entity recognition models wwere used to recognize and obfuscate PII such as names, locations, emails, organizations, and phone numbers.
-          We understand implicit bias within trained models and chose to remove PII rather than subsitute psuedonyms.
-      \item \textbf{Resume Classification} To reduce the search space, we use the resume industry as a heuristic filtering step for potential matches. 
-          We employ a linear support vector machine classifier (SVM) with $l2$ regularization to place resumes into industry buckets, trained on dense vector representations of resumes generated using an embedding model. 
-          Raw training data contained granular categories with relatively small supports. In turn, we choose to map these onto 12 broader industry level categories, under which our classifier achieves a top-2 accuracy of $~88\%$ on a holdout validation set. 
-      \item \textbf{Skill Extraction} We chose a hybrid approach using spaCy PhraseMatcher, 
-          a fast dictionary-based skill matching against 99k+ canonical skill terms and GliNER (Generalist NER Model), a bidirectional transformer. 
-          The PhraseMatcher allowed for rapid keyword matching while, GliNER allowed for semantic information to be extracted like education differences (BS, MS, PHD)
-          This was a difficult process due to some canidates providing enumerated lists of skills, while others chose to let their experience repersent their skills.
+      \item \textbf{Data Cleaning:}
+          \begin{itemize}
+              \item strips non-alphanumeric characters and white space
+              \item uses regex and named entity recognition to obsfucate PII
+              \item Removing PII eliminates implicit bias in later trained networks
+            \end{itemize}
 
+      \item \textbf{Resume Classification:}  
+
+          \begin{itemize}
+              \item Linear support vector matchine classifies resumes into 12 industry buckets
+              \item Embedding transformer to vectorize the resume
+              \item Achieves \textbf{>90\%} top-2 accuracy 
+            \end{itemize}
+      \item \textbf{Skill Extraction:} 
+          \begin{itemize}
+              \item spaCy PhraseMatcher used for rapid dictionary matching agaisnt 99k relevant terms
+                \item GLiNER (bidirectional transformer) used to extract semantic information like education and experience
+          \end{itemize}
   \end{itemize}
     
 
   \end{alertblock}
+
+  \begin{block}{References and Relevant Classes}
+
+      CSDS 132, CSDS 133, CSDS 221, CSDS 233, CSDS 293, CSDS 310, CSDS 338, CSDS 240, CSDS 356, CSDS 391
+
+    \nocite{*}
+    \footnotesize{\bibliographystyle{plain}\bibliography{poster}}
+
+  \end{block}
+
 
 \end{column}
 
@@ -140,8 +157,8 @@
 
   \begin{block}{System Architecture}
 
-    SkillSync is built as a three-tier web application. The frontend is a single-page interface where users paste their resume and receive a ranked list of job matches. It communicates
-  with a Flask backend that exposes two REST endpoints, /find-jobs for full pipeline execution and /score-job for scoring a single listing. The backend orchestrates a multi-stage NLP
+    SkillSync is built as a three-tier web application. The front end is a single-page interface where users paste their resume and receive a ranked list of job matches. It communicates
+  with a Flask back end that exposes two REST endpoints, /find-jobs for full pipeline execution and /score-job for scoring a single listing. The back end orchestrates a multi-stage NLP
   pipeline: resume parsing and classification, job aggregation, skill extraction, and composite scoring. All components are containerized via Docker with memory limits set to the
   resource demands of the embedded transformer models.
    % \begin{figure}
@@ -160,10 +177,11 @@
             \centering
             \includegraphics[width=\textwidth]{../project-assets/architecture.png}
             \captionof{figure}{System Architecture}
+
         \end{column}
 
         % Right Pane: 2x2 Grid
-        \begin{column}{0.48\textwidth}
+        \begin{column}{0.54\textwidth}
             \centering
             % Row 1
             \includegraphics[width=0.45\textwidth]{assets/sized_ex1.png}
@@ -183,11 +201,36 @@
 
   \begin{block}{Data Aggregation}
 
-    Jobs are fetched asynchronously from eight external job boards: Jobicy, RemoteOK, The Muse, Himalayas, We Work Remotely, Findwork.dev, USAJobs, and Adzuna. These job boards provide coverage over the majority of the markert including: remote,
-  government, and general listings. Each source returns listings in its own schema; We normalize these into a unified Job object. Duplicates are removed by (title, company,
-  source) key before scoring. Skill extraction draws on a canonical skill map of 99,000+ terms alongside a GLiNER transformer model, giving the system broad vocabulary coverage without
-  relying on any single job board's taxonomy
+\begin{figure}
+
+    \begin{columns}[c] % [c] centers the columns vertically
+        
+        % Left Pane: Single Image
+        \begin{column}{0.48\textwidth}
+            \begin{itemize}
+                \item Asynchronous fetching from 8 seperate job boards, covering multiple sectors and industries 
+                \item Data is normalized into a Job Object from its original schema
+                \item Jobs are filtered and duplicates removed to ensure unique listings
+                \item Skill extraction applied to jobs 
+            \end{itemize}
+
+        \end{column}
+
+        % Right Pane: 2x2 Grid
+        \begin{column}{0.48\textwidth}
+            \centering
+            % Row 1
+            \centering
+            \includegraphics[width=16cm]{assets/data_agg.drawio.png}
+            \caption{Data Aggregation Pipeline}            
+        \end{column}
+        
+    \end{columns}
+\end{figure}
+
   \end{block}
+
+  %% add diagram 
 
   \begin{block}{Front End}
 
@@ -249,7 +292,8 @@
 
 
   \begin{block}{Testing and Results}
-    Our project features a full pytest suite meant to ensure consistent development among a multi-person team and deployment verification. These tests provide coverage across our entire build, preprocess, extract and inference modules allowing us to verify changes and catch bugs.
+    Our project features a full pytest suite meant to ensure consistent development among a multi-person team and deployment verification. 
+    These tests provide coverage across our entire build, preprocess, extract and inference modules allowing us to verify changes and catch bugs.
 
     An example of our results are seen the in the front end demo, along with the figure below, which describes the approximate distribution of our pipeline on a random set of $25{,}800$ resume-job combinations.
     
@@ -271,17 +315,12 @@
 
 
   \end{block}
-
-  \begin{block}{References and Relevant Classes}
-
-      CSDS 132, CSDS 133, CSDS 221, CSDS 233, CSDS 293, CSDS 310, CSDS 338, CSDS 240, CSDS 340, CSDS 356, CSDS 391
-
-    \nocite{*}
-    \footnotesize{\bibliographystyle{plain}\bibliography{poster}}
-
-  \end{block}
+ \begin{block}{Project Challenges}
+    \end{block}
 
 
+
+  
 
 \end{column}
 
