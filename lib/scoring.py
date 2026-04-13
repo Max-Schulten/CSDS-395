@@ -4,7 +4,24 @@ from lib.gen_utils import load_embedder
 import numpy as np
 from scipy.stats import truncnorm, gmean, norm
 
-def score(resume: Resume, jobs: list[Job] | Job, embedding_model = None, alpha=0.4, beta=0.4, gamma=0.2, tau=0.6, window_size=30, stride=10) -> dict[str, str | list[str] | list[float]]:
+
+def _sigmoid_rescale(x, k=5, midpoint=0.15):
+    """Normalized sigmoid mapping [0, 1] -> [0, 1].
+    Preserves 0 → 0 and 1 → 1 exactly.
+    k controls steepness; midpoint shifts the inflection.
+
+    midpoint=0.15 is calibrated to the empirical skill coverage distribution:
+    most resume-JD pairs have raw coverage near 0.15-0.20 because job postings
+    list far more skills than any candidate is expected to hold.  Placing the
+    inflection at that value centres the output distribution and ensures that
+    candidates who match ~30-50% of listed skills score well above the midline:
+      20% coverage → ~0.38,  30% → ~0.58,  50% → ~0.82,  100% → 1.0
+    """
+    lo = 1.0 / (1.0 + np.exp(-k * (0.0 - midpoint)))
+    hi = 1.0 / (1.0 + np.exp(-k * (1.0 - midpoint)))
+    return (1.0 / (1.0 + np.exp(-k * (x - midpoint))) - lo) / (hi - lo)
+
+def score(resume: Resume, jobs: list[Job] | Job, embedding_model = None, alpha=0.4, beta=0.5, gamma=0.1, tau=0.6, window_size=30, stride=10) -> dict[str, str | list[str] | list[float]]:
     embedding_model = embedding_model if embedding_model is not None else load_embedder()
     out = {
         "resume": resume.to_dict(),
@@ -61,7 +78,7 @@ def semantic_score(resume_embs, job_embs, mu=np.float32(0.34515426), sigma=np.fl
     sim_mat = job_embs @ resume_embs.T
     best_per_window = sim_mat.max(axis=1)
     mean = np.average(best_per_window)
-    score = norm(mu).cdf(mean) # Mean and std dev derived from empirical distribution estimation
+    score = norm(mu, sigma).cdf(mean) # Mean and std dev derived from empirical distribution estimation
     return score
 
     
@@ -90,7 +107,7 @@ def skill_coverage(resume_skills, job_skills, resume_skills_emb, job_skills_emb,
         sum(weight(s, tau) for s in job_skill_scores.values()) / len(job_skills)
         if job_skills else 0.0
     )
-    coverage_score = np.sqrt(min(coverage_score/0.5, 1))
+    coverage_score = _sigmoid_rescale(coverage_score)
     covered_job_skills = list(job_skill_scores.keys())
     unmatched_job_skills = [js for js in job_skills if js not in job_skill_scores]
     return coverage_score, covered_job_skills, unmatched_job_skills

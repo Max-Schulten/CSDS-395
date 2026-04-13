@@ -307,26 +307,24 @@ class TestExtractEducation:
         ])
         assert extractor.extract_education("...")["degree"] == "phd"
 
-    def test_collects_majors_from_all_degree_spans(self, extractor):
+    def test_retains_only_most_confident_major(self, extractor):
+        """Only the single highest-confidence major is kept to avoid noisy accumulation."""
         self._mock_gliner(extractor, [
             self._match("B.S. Computer Science", score=0.98),
             self._match("M.S. Machine Learning", score=0.95),
         ])
         majors = extractor.extract_education("...")["majors"]
-        assert "computer science" in majors
-        assert "machine learning" in majors
+        assert majors == ["computer science"]
 
     def test_breaks_rank_tie_by_confidence(self, extractor):
-        """Two bachelor's spans — higher confidence one wins for degree;
-        both contribute majors."""
+        """Two bachelor's spans — higher confidence one wins for both degree and major."""
         self._mock_gliner(extractor, [
             self._match("B.S. Computer Science", score=0.95),
             self._match("B.A. Mathematics", score=0.80),
         ])
         result = extractor.extract_education("...")
         assert result["degree"] == "bachelor's"
-        assert "computer science" in result["majors"]
-        assert "mathematics" in result["majors"]
+        assert result["majors"] == ["computer science"]
 
     # ── Confidence floor for high-rank degrees ────────────────────────────────
 

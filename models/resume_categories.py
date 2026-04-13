@@ -27,12 +27,12 @@ import joblib
 from lib.resume_utils import SentenceTransformerVectorizer
 
 RS = 420
-SYNTH_INCLUDED = True
+SYNTH_INCLUDED = False
 SYNTH_MODEL = "Qwen7B"
 SPACY_MODEL = "en_core_web_md"
 
 #%% DATA
-data = pd.read_csv(f"./data/dataset-{SPACY_MODEL}.csv")
+data = pd.read_csv(f"../data/dataset-{SPACY_MODEL}.csv")
 print(f"# of examples: {data.shape[0]}")
 print("Label Distribution")
 print(data['Mapped_Category'].value_counts())
@@ -68,7 +68,7 @@ if SYNTH_INCLUDED:
                 break  # first non-empty line doesn't contain label — leave as-is
         return "\n".join(lines).lstrip()
 
-    synth_files = glob.glob(f"./data/synthetic_resumes/{SYNTH_MODEL}/*.csv")
+    synth_files = glob.glob(f"../data/synthetic_resumes/{SYNTH_MODEL}/*.csv")
     synth_df = pd.concat([pd.read_csv(f) for f in synth_files], ignore_index=True)
     synth_df['Resume_str'] = synth_df.apply(
         lambda row: strip_label_header(row['Resume_str'], row['Category']), axis=1
@@ -173,4 +173,4 @@ best_params = {k.replace("clf__", ""): v for k, v in gs.best_params_.items()}
 final_clf = LinearSVC(max_iter=3000, random_state=RS, **best_params)
 X_all_input = embedder.transform(pd.concat([X_tr, X_te]))
 final_clf.fit(X_all_input, pd.concat([y_tr, y_te]))
-joblib.dump((embedder, final_clf), "./models/resume_classifier.joblib")
+joblib.dump((embedder, final_clf), "../models/resume_classifier.joblib")

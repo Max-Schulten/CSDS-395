@@ -43,6 +43,55 @@ def make_job(skills=None, education=None, desc="job description"):
 
 
 # ---------------------------------------------------------------------------
+# _sigmoid_rescale
+# ---------------------------------------------------------------------------
+
+class TestSigmoidRescale:
+
+    def test_zero_maps_to_zero(self):
+        from lib.scoring import _sigmoid_rescale
+        assert pytest.approx(_sigmoid_rescale(0.0), abs=1e-9) == 0.0
+
+    def test_one_maps_to_one(self):
+        from lib.scoring import _sigmoid_rescale
+        assert pytest.approx(_sigmoid_rescale(1.0), abs=1e-9) == 1.0
+
+    def test_output_in_unit_interval(self):
+        from lib.scoring import _sigmoid_rescale
+        for x in np.linspace(0.0, 1.0, 50):
+            assert 0.0 <= _sigmoid_rescale(x) <= 1.0
+
+    def test_strictly_monotone_increasing(self):
+        from lib.scoring import _sigmoid_rescale
+        xs = np.linspace(0.0, 1.0, 50)
+        vals = [_sigmoid_rescale(x) for x in xs]
+        assert all(a < b for a, b in zip(vals, vals[1:]))
+
+    def test_symmetric_when_midpoint_is_half(self):
+        """With midpoint=0.5 the curve is symmetric: f(x) + f(1-x) == 1."""
+        from lib.scoring import _sigmoid_rescale
+        for x in np.linspace(0.05, 0.95, 20):
+            assert pytest.approx(_sigmoid_rescale(x, midpoint=0.5) + _sigmoid_rescale(1 - x, midpoint=0.5), abs=1e-9) == 1.0
+
+    def test_higher_k_is_steeper(self):
+        """Larger k pushes mid-range values closer to the extremes."""
+        from lib.scoring import _sigmoid_rescale
+        x = 0.6
+        assert _sigmoid_rescale(x, k=10) > _sigmoid_rescale(x, k=2)
+
+    def test_lower_midpoint_shifts_curve_left(self):
+        """Lowering midpoint means a given x scores higher than with midpoint=0.5."""
+        from lib.scoring import _sigmoid_rescale
+        x = 0.5
+        assert _sigmoid_rescale(x, midpoint=0.3) > _sigmoid_rescale(x, midpoint=0.5)
+
+    def test_default_params_match_explicit(self):
+        from lib.scoring import _sigmoid_rescale
+        for x in np.linspace(0.0, 1.0, 10):
+            assert pytest.approx(_sigmoid_rescale(x), abs=1e-12) == _sigmoid_rescale(x, k=5, midpoint=0.15)
+
+
+# ---------------------------------------------------------------------------
 # embed_doc
 # ---------------------------------------------------------------------------
 
@@ -121,7 +170,7 @@ class TestSemanticScore:
         v = unit([1, 2, 3, 4])
         res = np.array([v])
         job = np.array([v])
-        expected = float(norm(0.34515426).cdf(1.0))
+        expected = float(norm(0.34515426, 0.06738636).cdf(1.0))
         assert pytest.approx(float(semantic_score(res, job)), abs=1e-4) == expected
 
     def test_orthogonal_embeddings_return_low_score(self):
@@ -130,7 +179,7 @@ class TestSemanticScore:
         from scipy.stats import norm
         res = np.array([unit([1, 0, 0, 0])])
         job = np.array([unit([0, 1, 0, 0])])
-        expected = float(norm(0.34515426).cdf(0.0))
+        expected = float(norm(0.34515426, 0.06738636).cdf(0.0))
         assert pytest.approx(float(semantic_score(res, job)), abs=1e-4) == expected
 
     def test_jd_coverage_only_is_asymmetric(self):
@@ -186,15 +235,15 @@ class TestSkillCoverage:
         assert unmatched == []
 
     def test_partial_coverage(self):
-        from lib.scoring import skill_coverage
+        from lib.scoring import skill_coverage, _sigmoid_rescale
         # resume has python; job needs python + java (orthogonal → sim=0 < tau=0.5 → no match)
         v_py = unit([1, 0, 0, 0])
         v_java = unit([0, 1, 0, 0])
         res_emb = np.array([v_py])
         job_emb = np.array([v_py, v_java])
         score, covered, unmatched = skill_coverage(["python"], ["python", "java"], res_emb, job_emb, tau=0.5)
-        # python: weight(1.0, 0.5)=1.0; java: unmatched → coverage = 1/2
-        assert pytest.approx(score, abs=1e-6) == 0.5
+        # python: weight(1.0, 0.5)=1.0; java: unmatched → raw coverage = 1/2
+        assert pytest.approx(score, abs=1e-6) == _sigmoid_rescale(0.5)
         assert "python" in covered
         assert "java" in unmatched
 
@@ -227,7 +276,9 @@ class TestSkillCoverage:
         sim_low = midpoint
         v2_low = np.array([sim_low, np.sqrt(max(0, 1 - sim_low**2)), 0.0, 0.0])
         score_low, _, _ = skill_coverage(["python"], ["python"], v1.reshape(1, -1), v2_low.reshape(1, -1), tau=tau)
-        assert pytest.approx(score_low, abs=1e-4) == tau
+        # raw coverage = tau; sigmoid_rescale maps it to the expected score
+        from lib.scoring import _sigmoid_rescale
+        assert pytest.approx(score_low, abs=1e-4) == _sigmoid_rescale(tau)
 
     def test_returns_float(self):
         from lib.scoring import skill_coverage

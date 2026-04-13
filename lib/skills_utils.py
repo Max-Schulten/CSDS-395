@@ -151,8 +151,7 @@ class SkillsExtractor:
                     skills[skill] = [start, end]
 
         degree_candidates: list[tuple[int, float, str]] = []
-        majors: list[str] = []
-        seen_majors: set[str] = set()
+        major_candidates: list[tuple[float, str]] = []  # (confidence, major_text)
 
         if use_gliner:
             for match in self._predict_entities_chunked(text):
@@ -179,9 +178,8 @@ class SkillsExtractor:
                             remainder = stripped
                             break
                     major_lower = remainder.lower()
-                    if remainder and remainder != raw and major_lower not in seen_majors:
-                        majors.append(major_lower)
-                        seen_majors.add(major_lower)
+                    if remainder and remainder != raw:
+                        major_candidates.append((match['score'], major_lower))
 
                     floor = self._DEGREE_CONFIDENCE_FLOOR[normalized]
                     if match['score'] >= floor:
@@ -189,16 +187,17 @@ class SkillsExtractor:
 
                 elif label == "education major":
                     major_lower = match['text'].lower().strip()
-                    if major_lower and major_lower not in seen_majors:
-                        majors.append(major_lower)
-                        seen_majors.add(major_lower)
+                    if major_lower:
+                        major_candidates.append((match['score'], major_lower))
 
         education_level = max(degree_candidates, key=lambda x: (x[0], x[1]))[2] if degree_candidates else None
+        # Retain only the single most-confident major to avoid noisy accumulation
+        majors = [max(major_candidates)[1]] if major_candidates else []
         education = {"degree": education_level, "majors": majors}
 
         return skills, education
 
-    def extract_skills(self, text: str, use_gliner: bool = True, use_spacy: bool = False) -> dict[str, list[int]]:
+    def extract_skills(self, text: str, use_gliner: bool = True, use_spacy: bool = True) -> dict[str, list[int]]:
         """Extract skills from text. Wraps extract_all for backwards compatibility."""
         skills, _ = self.extract_all(text, use_gliner=use_gliner, use_spacy=use_spacy)
         return skills
