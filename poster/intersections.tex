@@ -2,6 +2,15 @@
  % https://github.com/andiac/gemini-cam
 % a fork of https://github.com/anishathalye/gemini
 
+
+%%%% ADJUST DIMS BEFORE PRINT
+%%%% ADJUST DIMS BEFORE PRINT
+%%%% ADJUST DIMS BEFORE PRINT
+%%%% ADJUST DIMS BEFORE PRINT
+%%%% ADJUST DIMS BEFORE PRINT
+%%%% ADJUST DIMS BEFORE PRINT
+
+
 \documentclass[final]{beamer}
 
 % ====================
@@ -59,8 +68,8 @@
 % Refer to https://github.com/k4rtik/uchicago-poster
 % logo: https://communications.admin.ox.ac.uk/communications-resources/visual-identity/identity-guidelines/the-oxford-logo
 
-% replace with clear background
-\logoright{\includegraphics[height=7cm]{assets/cw_logo.png}}
+% replace with clear background -- and higher quality image
+\logoright{\includegraphics[height=3cm]{assets/cwru_logo.png}}
 % \logoleft{\includegraphics[height=7cm]{logos/ox-logo.png}}
 
 % ====================
@@ -238,19 +247,33 @@
 
   \end{exampleblock}
 
+
   \begin{block}{Testing and Results}
+    Our project features a full pytest suite meant to ensure consistent development among a multi-person team and deployment verification. These tests provide coverage across our entire build, preprocess, extract and inference modules allowing us to verify changes and catch bugs.
 
-  \end{block}
+    An example of our results are seen the in the front end demo, along with the figure below, which describes a test between different resumes against a buisness job description.
+    
+    \begin{figure}
+    \centering
+        \includegraphics[width=15cm]{assets/sys_arch.png}
+        \caption{place holder}
 
-  \begin{block}{Project Challenges}
+    \end{figure}
+
+
+
   \end{block}
 
   \begin{block}{References and Relevant Classes}
+
+      CSDS 132, CSDS 133, CSDS 221, CSDS 233, CSDS 293, CSDS 310, CSDS 338, CSDS 240, CSDS 356, CSDS 391
 
     \nocite{*}
     \footnotesize{\bibliographystyle{plain}\bibliography{poster}}
 
   \end{block}
+
+
 
 \end{column}
 

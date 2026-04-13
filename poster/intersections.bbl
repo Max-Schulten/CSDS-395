@@ -1,0 +1,41 @@
+\begin{thebibliography}{10}
+
+\bibitem{adzuna_api}
+{Adzuna Ltd.}
+\newblock {Adzuna Job Search API v1}, 2024.
+
+
+\bibitem{themuse_api}
+{Daily Muse Inc.}
+\newblock {The Muse API}, 2024.
+
+
+\bibitem{esco_ontology}
+{European Commission}.
+\newblock {European Skills, Competences, Qualifications and Occupations (ESCO)}, 2023.
+\newblock European Commission DG Employment, Social Affairs and Inclusion.
+
+\bibitem{spacy}
+Matthew Honnibal, Ines Montani, Sofie Van~Landeghem, and Adriane Boyd.
+\newblock {spaCy: Industrial-strength Natural Language Processing in Python}, 2020.
+
+\bibitem{scikit-learn}
+F.~Pedregosa, G.~Varoquaux, A.~Gramfort, V.~Michel, B.~Thirion, O.~Grisel, M.~Blondel, P.~Prettenhofer, R.~Weiss, V.~Dubourg, J.~Vanderplas, A.~Passos, D.~Cournapeau, M.~Brucher, M.~Perrot, and E.~Duchesnay.
+\newblock Scikit-learn: Machine learning in {P}ython.
+\newblock {\em Journal of Machine Learning Research}, 12:2825--2830, 2011.
+
+\bibitem{onet_database}
+{U.S. Department of Labor, Employment and Training Administration}.
+\newblock {O*NET 28.0 Database}, 2023.
+\newblock National Center for O*NET Development.
+
+\bibitem{usajobs_api}
+{U.S. Office of Personnel Management}.
+\newblock {USAJobs Search API}, 2024.
+
+\bibitem{gliner2023}
+Urchade Zaratiana, Nadi Tomeh, Pierre Holat, and Thierry Chanty.
+\newblock Gliner: Generalist model for named entity recognition using bidirectional transformer.
+\newblock {\em arXiv preprint arXiv:2311.01090}, 2023.
+
+\end{thebibliography}
