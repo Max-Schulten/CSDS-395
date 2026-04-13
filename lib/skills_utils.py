@@ -198,9 +198,9 @@ class SkillsExtractor:
 
         return skills, education
 
-    def extract_skills(self, text: str, use_gliner: bool = True) -> dict[str, list[int]]:
+    def extract_skills(self, text: str, use_gliner: bool = True, use_spacy: bool = False) -> dict[str, list[int]]:
         """Extract skills from text. Wraps extract_all for backwards compatibility."""
-        skills, _ = self.extract_all(text, use_gliner=use_gliner, use_spacy=True)
+        skills, _ = self.extract_all(text, use_gliner=use_gliner, use_spacy=use_spacy)
         return skills
 
     def extract_education(self, text: str) -> dict:
