@@ -90,7 +90,10 @@ matchBtn.addEventListener("click", async () => {
         jobResults.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (err) {
         console.error(err);
-        jobResults.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+        jobResults.innerHTML = `
+            <div class="error-card">
+                <p class="error-card__message">${err.message}</p>
+            </div>`;
     }
 });
 
@@ -101,7 +104,16 @@ async function postJSON(url, body) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
     });
-    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    if (!res.ok) {
+        let userMessage = "Something went wrong. Please check your input and try again.";
+        try {
+            const errBody = await res.json();
+            if (errBody && typeof errBody.error === "string" && errBody.error.length > 0) {
+                userMessage = errBody.error;
+            }
+        } catch (_) { /* non-JSON error body — use default */ }
+        throw new Error(userMessage);
+    }
     return res.json();
 }
 
@@ -111,7 +123,16 @@ async function fetchJobsStreaming(body) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
     });
-    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    if (!res.ok) {
+        let userMessage = "Something went wrong. Please check your input and try again.";
+        try {
+            const errBody = await res.json();
+            if (errBody && typeof errBody.error === "string" && errBody.error.length > 0) {
+                userMessage = errBody.error;
+            }
+        } catch (_) { /* non-JSON error body — use default */ }
+        throw new Error(userMessage);
+    }
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
@@ -136,10 +157,15 @@ async function fetchJobsStreaming(body) {
             } else if (event.type === "result") {
                 const { type, ...result } = event;
                 return result;
+            } else if (event.type === "error") {
+                const message = (typeof event.message === "string" && event.message.length > 0)
+                    ? event.message
+                    : "Something went wrong. Please try again.";
+                throw new Error(message);
             }
         }
     }
-    throw new Error("Stream ended without a result.");
+    throw new Error("The job search did not complete. Please try again.");
 }
 
 // --- Renderers ---

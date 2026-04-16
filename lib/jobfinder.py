@@ -12,6 +12,108 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 class JobFinder:
+    SENIORITY_PATTERNS = {
+        "executive": re.compile(
+            r"\b(?:"
+            r"c[- ]?(?:suite|level|exec(?:utive)?)"
+            r"|chief\s+\w+\s+officer"
+            r"|(?:ceo|cto|cfo|coo|ciso|cpo|cmo|cro|chro|cdo)"         # expanded C-suite acronyms
+            r"|(?:managing|executive)\s+director"
+            r"|(?:vice\s+president|vp)\s+of"
+            # partner: only qualified forms or standalone when NOT an IC/program role
+            r"|(?:senior|managing|equity|founding|general)\s+partner"
+            r"|partner(?!\s+(?:engineer(?:ing)?|manager|success|program|operations|development|marketing|relations))"
+            r")\b",
+            re.IGNORECASE,
+        ),
+
+        "director": re.compile(
+            r"\b(?:"
+            r"(?:associate\s+|senior\s+)?director(?:\s+of)?"           # includes Associate Director
+            r"|head\s+of\s+\w+"
+            r"|group\s+(?:product\s+)?manager"
+            r")\b",
+            re.IGNORECASE,
+        ),
+
+        # Split sr./jr. (abbreviations with period) out of the \b...\b group because a trailing
+        # \b fails after a period — \b requires a word/non-word boundary, but "." and " " are both
+        # non-word so no boundary exists. Abbreviations are always professional context.
+        "senior": re.compile(
+            r"(?:"
+            r"\bsr\.(?=\s)"                                             # "Sr." before whitespace
+            r"|\b(?:"
+            r"sr\b"                                                     # "Sr" without period
+            r"|senior(?=\s+\w)"                                        # requires a role word after
+            r"|staff(?=\s+\w)"                                         # staff engineer / scientist
+            r"|principal(?=\s+\w)"                                     # principal engineer / pm
+            r"|lead(?!\s+(?:student|ta|teaching|instructor|tutor|advisor|counselor))"
+            r"|expert"                                                  # subject matter expert, aws expert, etc.
+            r"|architect"
+            r")\b"
+            r"(?!\s+(?:"                                               # NOT student/academic contexts
+            r"year|class|standing|student|students"
+            r"|thesis|dissertation|seminar|honors"
+            # capstone/project are academic when bare, but valid in professional compound titles
+            # (e.g. "Senior Project Manager", "Senior Capstone Engineer")
+            r"|capstone(?!\s+(?:manager|engineer|architect|lead|coordinator|analyst|consultant))"
+            r"|project(?!\s+(?:manager|management|engineer|lead|coordinator|analyst|architect|officer|specialist|consultant))"
+            r"|research\s+(?:fellow|assistant|project|student)"
+            r"|faculty|fellow|lecturer"
+            r"|prom|week|activities|activity"
+            r"))"
+            r")",
+            re.IGNORECASE,
+        ),
+
+        "mid": re.compile(
+            r"\b(?:"
+            r"mid(?:[- ]level)?"
+            r"|intermediate"
+            r"|(?:software\s+)?engineer\s+(?:ii|2|iii|3)"             # Engineer II / III
+            r"|associate(?!"                                            # not academic or executive
+            r"'s"                                                      # associate's degree (possessive, no space)
+            r"|\s+(?:degree|professor"
+            r"|of\s+(?:arts|science|applied\s+science)"
+            r"|dean|provost|director|vice\s+\w+"
+            r"))"
+            r")\b",
+            re.IGNORECASE,
+        ),
+
+        "junior": re.compile(
+            r"(?:"
+            r"\bjr\.(?=\s)"                                            # "Jr." before whitespace
+            r"|\b(?:"
+            r"jr\b"                                                    # "Jr" without period
+            r"|junior(?=\s+\w)"                                       # requires a role word after
+            r"|entry[- ]level"
+            r"|(?:software\s+)?engineer\s+i(?!\w)"                    # Engineer I (not II/III)
+            r"|new\s+grad(?:uate)?"
+            r"|early[- ]career"
+            r")\b"
+            r"(?!\s+(?:"                                               # NOT student/academic contexts
+            r"year|class|standing|student|students"
+            r"|thesis|faculty|fellow|honors|capstone|project"
+            r"|research\s+(?:fellow|assistant|student)"
+            r"|varsity|league|olympics|achievement"
+            r"|prom|activities|activity"
+            r"))"
+            r")",
+            re.IGNORECASE,
+        ),
+
+        "intern": re.compile(
+            r"\b(?:"
+            r"intern(?:ship)?"
+            r"|co[- ]?op"
+            r"|apprentice(?:ship)?"
+            r"|trainee"
+            r"|practicum"
+            r")\b",
+            re.IGNORECASE,
+        ),
+    }
     SKILL_SAMPLE_SIZE = 3
     RESULTS_PER_QUERY = 10
 
@@ -162,6 +264,17 @@ class JobFinder:
         ],
     }
     
+    @staticmethod
+    def _seniority_retrieval(text: str) -> tuple[str, int] | None:
+        ord_level = len(JobFinder.SENIORITY_PATTERNS.keys()) # Highest possible ordinal level
+        for level, pattern in JobFinder.SENIORITY_PATTERNS.items():
+            m = pattern.search(text)
+            if m:
+                return level, ord_level
+            ord_level -= 1 # Decrease ordinal level
+        return None
+
+    
     def __init__(self, resume: Resume, skill_extractor: SkillsExtractor | None = None, n_jobs=10) -> None:
         self.skill_extractor = skill_extractor if skill_extractor is not None else SkillsExtractor()
         self.n_jobs = n_jobs
@@ -199,13 +312,22 @@ class JobFinder:
                 raw += r # type: ignore
         return raw
 
-    def _skill_hit_count(self, desc: str) -> int:
-        """Count how many resume skills appear as whole-word matches in desc."""
+    def _heuristic_score(self, desc: str, res_seniority: int | None) -> int:
+        """
+        Count how many resume skills appear as whole-word matches in desc.
+        Acts as a heuristic for score -- can't realistically score thousands of jobs retrieved
+        """
         desc_lower = desc.lower()
-        return sum(
+        skill_hits = sum(
             1 for skill in self.resume.skills
             if re.search(r"\b" + re.escape(skill.lower()) + r"\b", desc_lower)
         )
+        seniority_tuple = self._seniority_retrieval(desc_lower)
+        coeff = 1
+        if seniority_tuple is not None and res_seniority is not None:
+            coeff = int(seniority_tuple[1]-1 <= res_seniority) # Need candidate to be within one seniority level
+        print("Job:", seniority_tuple)
+        return coeff * skill_hits
 
     def _fetch_and_rank(self) -> list[dict]:
         """Fetch from all sources, deduplicate, rank by skill hits, and return top n_jobs raw dicts."""
@@ -219,8 +341,13 @@ class JobFinder:
             if key not in seen:
                 seen.add(key)
                 deduped.append(r)
+            
+        resume_seniority_tuple = self._seniority_retrieval(self.resume.resume_text)
+        resume_sen_int = resume_seniority_tuple[1] if resume_seniority_tuple is not None else None
+        
+        print("Res:", resume_seniority_tuple)
 
-        deduped.sort(key=lambda r: self._skill_hit_count(r["desc"]), reverse=True)
+        deduped.sort(key=lambda r: self._heuristic_score(r["desc"], resume_sen_int), reverse=True)
         return deduped[:self.n_jobs] if self.n_jobs else deduped
 
     def find_jobs(self) -> list[Job]:

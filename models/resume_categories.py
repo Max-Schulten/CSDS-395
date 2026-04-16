@@ -120,11 +120,13 @@ print("Embedding...")
 X_tr_input = embedder.transform(X_tr)
 X_te_input = embedder.transform(X_te)
 print("Embedding Complete")
+
+#%% 
 pipe = Pipeline([
-    ("clf", LinearSVC(max_iter=3000, random_state=RS))
+    ("clf", LinearSVC(max_iter=3000, random_state=10))
 ])
 param_grid = {
-    "clf__C": [0.4, 1, 2, 10],
+    "clf__C": [0.4, 1, 2, 5, 10],
     "clf__class_weight": ['balanced', None],
     "clf__penalty": ['l2']
 }
