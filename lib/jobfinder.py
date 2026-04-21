@@ -326,7 +326,6 @@ class JobFinder:
         coeff = 1
         if seniority_tuple is not None and res_seniority is not None:
             coeff = int(seniority_tuple[1]-1 <= res_seniority) # Need candidate to be within one seniority level
-        print("Job:", seniority_tuple)
         return coeff * skill_hits
 
     def _fetch_and_rank(self) -> list[dict]:
@@ -344,8 +343,6 @@ class JobFinder:
             
         resume_seniority_tuple = self._seniority_retrieval(self.resume.resume_text)
         resume_sen_int = resume_seniority_tuple[1] if resume_seniority_tuple is not None else None
-        
-        print("Res:", resume_seniority_tuple)
 
         deduped.sort(key=lambda r: self._heuristic_score(r["desc"], resume_sen_int), reverse=True)
         return deduped[:self.n_jobs] if self.n_jobs else deduped

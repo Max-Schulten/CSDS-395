@@ -13,12 +13,21 @@ const nJobsValue = document.getElementById("nJobsValue");
 const nJobsWarning = document.getElementById("nJobsWarning");
 
 let mode = "find-jobs"; // "find-jobs" | "check-match"
+let activeRequest = null; // AbortController for the in-flight request
+
+function cancelActiveRequest() {
+    if (activeRequest) {
+        activeRequest.abort();
+        activeRequest = null;
+    }
+}
 
 // --- Toggle ---
 findJobsToggle.addEventListener("click", () => setMode("find-jobs"));
 checkMatchToggle.addEventListener("click", () => setMode("check-match"));
 
 function setMode(newMode) {
+    cancelActiveRequest();
     mode = newMode;
     if (mode === "find-jobs") {
         findJobsToggle.classList.add("active");
@@ -69,6 +78,10 @@ matchBtn.addEventListener("click", async () => {
         return;
     }
 
+    cancelActiveRequest();
+    const controller = new AbortController();
+    activeRequest = controller;
+
     jobResults.innerHTML = '<div class="spinner"></div><p class="spinner-label">Analyzing your resume…</p>';
 
     try {
@@ -81,28 +94,32 @@ matchBtn.addEventListener("click", async () => {
                 jobResults.innerHTML = '<p class="placeholder">Upload your resume to see recommended jobs and match scores.</p>';
                 return;
             }
-            const data = await postJSON("/score-job", { resume_text: resumeText, job_text: jobDescText });
+            const data = await postJSON("/score-job", { resume_text: resumeText, job_text: jobDescText }, controller.signal);
             renderCheckMatch(data);
         } else {
-            const data = await fetchJobsStreaming({ resume_text: resumeText, n_jobs: parseInt(nJobsSlider.value) });
+            const data = await fetchJobsStreaming({ resume_text: resumeText, n_jobs: parseInt(nJobsSlider.value) }, controller.signal);
             renderFindJobs(data);
         }
         jobResults.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (err) {
+        if (err.name === "AbortError") return;
         console.error(err);
         jobResults.innerHTML = `
             <div class="error-card">
                 <p class="error-card__message">${err.message}</p>
             </div>`;
+    } finally {
+        if (activeRequest === controller) activeRequest = null;
     }
 });
 
 // --- Fetch helpers ---
-async function postJSON(url, body) {
+async function postJSON(url, body, signal) {
     const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal
     });
     if (!res.ok) {
         let userMessage = "Something went wrong. Please check your input and try again.";
@@ -117,11 +134,12 @@ async function postJSON(url, body) {
     return res.json();
 }
 
-async function fetchJobsStreaming(body) {
+async function fetchJobsStreaming(body, signal) {
     const res = await fetch("/find-jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal
     });
     if (!res.ok) {
         let userMessage = "Something went wrong. Please check your input and try again.";
